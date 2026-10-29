@@ -10,7 +10,7 @@ local Shop = {}
 Shop.Passes = {
 	{
 		id = "VIP",
-		gamePassId = 0,
+		gamePassId = 2057687861,
 		name = "VIP",
 		suggestedPrice = 250,
 		description = "Golden name tag, a crown, the Golden Trail, the Royal Hammer and +25% coins (coins only buy looks).",
