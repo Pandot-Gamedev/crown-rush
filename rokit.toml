@@ -1,0 +1,3 @@
+# Tools for the optional Rojo workflow (see docs/SETUP_GUIDE.md, "Getting updates with Rojo")
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
