@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Courses = require(Shared.Courses)
+local Rounds = require(Shared.Rounds)
 
 local MapBuilder = require(script.MapBuilder)
 local DataService = require(script.DataService)
@@ -55,6 +56,7 @@ DataService.Start()
 --   game.ServerStorage.CrownRushTest:Invoke("course", "candy_3") -- play any course, locked or not
 --   game.ServerStorage.CrownRushTest:Invoke("unlock") -- finish every course (3 stars each)
 --   game.ServerStorage.CrownRushTest:Invoke("checkpoint", 2) -- jump to a checkpoint on your course
+--   game.ServerStorage.CrownRushTest:Invoke("rounds", "door_dash,gem_grab,ball_rush,crown_climb") -- next tournament's rounds
 if RunService:IsStudio() then
 	local test = Instance.new("BindableFunction")
 	test.Name = "CrownRushTest"
@@ -67,6 +69,16 @@ if RunService:IsStudio() then
 			end
 			local instance = CourseService.Open(course)
 			CourseService.Enter(player, instance, { mode = "adventure" })
+			return "ok"
+		elseif command == "rounds" then
+			local list = {}
+			for id in string.gmatch(amount, "[^,%s]+") do
+				if not Rounds.ById[id] then
+					return "unknown round " .. id
+				end
+				table.insert(list, id)
+			end
+			TournamentService.NextPlan = list
 			return "ok"
 		elseif command == "checkpoint" then
 			local run = player and CourseService.Get(player)

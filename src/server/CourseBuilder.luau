@@ -68,11 +68,12 @@ local function estimateTime(nodes, start)
 	local seconds = 0
 	local last = start
 	for _, node in ipairs(nodes) do
-		local target = node.to
-			or node.exit
-			or node.past
-			or (node.choices and node.choices[1] and node.choices[1].at)
-			or node.z
+		-- (door choices are points; blinking tile choices are { spec, at })
+		local choice = node.choices and node.choices[1]
+		if type(choice) == "table" then
+			choice = choice.at
+		end
+		local target = node.to or node.exit or node.past or choice or node.z
 		if typeof(target) == "Vector3" and last then
 			seconds += (target - last).Magnitude / Config.WalkSpeed
 			last = target

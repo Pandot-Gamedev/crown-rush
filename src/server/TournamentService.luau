@@ -380,14 +380,25 @@ local function finish(t, winner, alive)
 	t.pad.tournament = nil
 end
 
+-- Studio tests can set the next tournament's rounds (a list of round ids)
+TournamentService.NextPlan = nil
+
 local function start(pad, players)
 	nextId += 1
+	local plan = Rounds.Pick(random)
+	if TournamentService.NextPlan then
+		plan = {}
+		for _, id in ipairs(TournamentService.NextPlan) do
+			table.insert(plan, Rounds.ById[id])
+		end
+		TournamentService.NextPlan = nil
+	end
 	local t = setmetatable({
 		id = nextId,
 		slot = pad.slot,
 		pad = pad,
 		entrants = {},
-		plan = Rounds.Pick(random),
+		plan = plan,
 		roundNumber = 0,
 		timing = Timing,
 	}, Tournament)
