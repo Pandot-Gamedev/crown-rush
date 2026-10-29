@@ -73,16 +73,13 @@ function Guide.Init(screenGui)
 		Visible = false,
 		Parent = screenGui,
 	}, { UI.corner(12), UI.stroke(T.Gold, 3), UI.padding(8) })
-	cardText = UI.label(
-		"",
-		{
-			Size = UDim2.fromScale(1, 1),
-			TextColor3 = Color3.fromRGB(60, 40, 20),
-			Font = T.BodyFont,
-			TextWrapped = true,
-			Parent = card,
-		}
-	)
+	cardText = UI.label("", {
+		Size = UDim2.fromScale(1, 1),
+		TextColor3 = Color3.fromRGB(60, 40, 20),
+		Font = T.BodyFont,
+		TextWrapped = true,
+		Parent = card,
+	})
 
 	-- An invisible part that follows the player carries the start of the line
 	follower = Instance.new("Part")

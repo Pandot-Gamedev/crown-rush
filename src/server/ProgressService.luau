@@ -215,6 +215,12 @@ function ProgressService.AddAction(name, handler)
 	actions[name] = handler
 end
 
+-- Questions players' screens ask (leaderboards, ghosts). handler(player, argument) -> answer
+local questions = {}
+function ProgressService.AddQuestion(name, handler)
+	questions[name] = handler
+end
+
 function ProgressService.Start()
 	DataService.OnLoaded(function(player, data)
 		giveDailyReward(player, data)
@@ -250,6 +256,19 @@ function ProgressService.Start()
 			return false, "Something went wrong"
 		end
 		return success, message
+	end
+
+	Remotes.Ask.OnServerInvoke = function(player, name, argument)
+		local handler = type(name) == "string" and questions[name]
+		if not handler then
+			return nil
+		end
+		local ok, answer = pcall(handler, player, argument)
+		if not ok then
+			warn("[ProgressService] question " .. name .. " failed: " .. tostring(answer))
+			return nil
+		end
+		return answer
 	end
 end
 

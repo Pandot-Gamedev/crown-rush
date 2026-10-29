@@ -18,6 +18,7 @@ local UI = require(script.Parent.UI)
 local State = require(script.Parent.State)
 local Notifications = require(script.Parent.Notifications)
 local Movement = require(script.Parent.Movement)
+local Ghost = require(script.Parent.Ghost)
 local T = UI.Theme
 
 local RunHud = {}
@@ -27,6 +28,11 @@ local GEM = utf8.char(9670) -- a diamond
 local DEFAULT_GRAVITY = 196.2
 
 local run = nil -- the latest summary from the server
+local GHOST_CHOICES = { "mine", "record", "off" }
+local GHOST_NAMES = { mine = "Ghost: My best", record = "Ghost: Record", off = "Ghost: Off" }
+local ghostChoice = "mine"
+local ghostButton
+local ghostToken = 0
 local bar, nameLabel, timerLabel, parLabel, checkpointLabel, gemLabels
 local buttons, skipButton
 local resultCard, resultBody
@@ -69,31 +75,23 @@ local function applyWorld(worldId)
 	local world = worldId and Worlds.ById[worldId]
 	local info = TweenInfo.new(1.2)
 	if world then
-		TweenService:Create(
-			Lighting,
-			info,
-			{
-				OutdoorAmbient = world.sky.ambient,
-				FogColor = world.sky.fog,
-				FogEnd = 2500,
-				ClockTime = world.id == "space" and 0 or 14,
-			}
-		):Play()
+		TweenService:Create(Lighting, info, {
+			OutdoorAmbient = world.sky.ambient,
+			FogColor = world.sky.fog,
+			FogEnd = 2500,
+			ClockTime = world.id == "space" and 0 or 14,
+		}):Play()
 		if atmosphere then
 			TweenService:Create(atmosphere, info, { Color = world.sky.top, Decay = world.sky.fog }):Play()
 		end
 		Workspace.Gravity = world.gravity or DEFAULT_GRAVITY
 	else
-		TweenService:Create(
-			Lighting,
-			info,
-			{
-				OutdoorAmbient = plazaLook.ambient,
-				FogColor = plazaLook.fogColor,
-				FogEnd = plazaLook.fogEnd,
-				ClockTime = plazaLook.clock,
-			}
-		):Play()
+		TweenService:Create(Lighting, info, {
+			OutdoorAmbient = plazaLook.ambient,
+			FogColor = plazaLook.fogColor,
+			FogEnd = plazaLook.fogEnd,
+			ClockTime = plazaLook.clock,
+		}):Play()
 		if atmosphere then
 			TweenService
 				:Create(
@@ -105,6 +103,38 @@ local function applyWorld(worldId)
 		end
 		Workspace.Gravity = DEFAULT_GRAVITY
 	end
+end
+
+------------------------------------------------------------------ Ghosts
+local function loadGhost()
+	ghostToken += 1
+	local token = ghostToken
+	Ghost.Clear()
+	if not run or run.mode ~= "adventure" or ghostChoice == "off" then
+		return
+	end
+	local courseId, origin = run.courseId, run.origin
+	task.spawn(function()
+		local ok, ghost = pcall(function()
+			return Remotes.Ask:InvokeServer("Ghost", { courseId = courseId, which = ghostChoice })
+		end)
+		if token ~= ghostToken or not run or run.courseId ~= courseId then
+			return
+		end
+		if ok and ghost and typeof(origin) == "CFrame" then
+			Ghost.Load(ghost, origin)
+			Ghost.SetStart(run.started)
+		elseif ghostChoice == "mine" then
+			Notifications.Show("No ghost yet: finish this course to make one.", "info")
+		end
+	end)
+end
+
+local function cycleGhost()
+	local index = table.find(GHOST_CHOICES, ghostChoice) or 1
+	ghostChoice = GHOST_CHOICES[index % #GHOST_CHOICES + 1]
+	ghostButton.Text = GHOST_NAMES[ghostChoice]
+	loadGhost()
 end
 
 ------------------------------------------------------------------ The bar
@@ -125,6 +155,7 @@ local function refreshBar()
 	end
 	gemLabels[1].Parent.Visible = run.mode == "adventure"
 	skipButton.Visible = run.canSkip == true and not run.skipped
+	ghostButton.Visible = run.mode == "adventure"
 	Movement.SetGems({
 		run.gems[1] or run.savedGems[1],
 		run.gems[2] or run.savedGems[2],
@@ -149,28 +180,22 @@ local function buildBar(screenGui)
 	)
 	timerLabel =
 		UI.label("0:00.00", { Position = UDim2.fromOffset(14, 26), Size = UDim2.new(1, -28, 0, 38), Parent = bar })
-	checkpointLabel = UI.label(
-		"",
-		{
-			Position = UDim2.fromOffset(14, 66),
-			Size = UDim2.new(0.4, 0, 0, 18),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = bar,
-		}
-	)
-	parLabel = UI.label(
-		"",
-		{
-			AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 66),
-			Size = UDim2.new(0.3, 0, 0, 18),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			Parent = bar,
-		}
-	)
+	checkpointLabel = UI.label("", {
+		Position = UDim2.fromOffset(14, 66),
+		Size = UDim2.new(0.4, 0, 0, 18),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = bar,
+	})
+	parLabel = UI.label("", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 66),
+		Size = UDim2.new(0.3, 0, 0, 18),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		Parent = bar,
+	})
 	local gemRow = UI.new("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -14, 0, 64),
@@ -186,7 +211,7 @@ local function buildBar(screenGui)
 	buttons = UI.new("Frame", {
 		Name = "RunButtons",
 		Position = UDim2.fromOffset(16, 166),
-		Size = UDim2.fromOffset(130, 3 * 48),
+		Size = UDim2.fromOffset(130, 4 * 48),
 		BackgroundTransparency = 1,
 		Visible = false,
 		Parent = screenGui,
@@ -201,13 +226,18 @@ local function buildBar(screenGui)
 	skipButton = UI.button("Skip ahead", Color3.fromRGB(170, 100, 255), function()
 		act("SkipSection")
 	end, { Size = UDim2.fromOffset(130, 42), LayoutOrder = 3, Visible = false, Parent = buttons })
+	ghostButton = UI.button(GHOST_NAMES[ghostChoice], Color3.fromRGB(90, 110, 150), cycleGhost, {
+		Size = UDim2.fromOffset(130, 42),
+		LayoutOrder = 4,
+		Parent = buttons,
+	})
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if
 			not processed
 			and input.KeyCode == Enum.KeyCode.R
 			and run
-			and run.mode == "adventure"
+			and (run.mode == "adventure" or run.mode == "daily")
 			and not resultCard.Visible
 		then
 			act("RetryCourse")
@@ -233,7 +263,13 @@ local function buildBar(screenGui)
 end
 
 ------------------------------------------------------------------ Results
+local showDailyResult
+
 local function showResult(result)
+	if result.mode == "daily" then
+		showDailyResult(result)
+		return
+	end
 	UI.clear(resultBody)
 	UI.list(6).Parent = resultBody
 	resultBody:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -246,16 +282,13 @@ local function showResult(result)
 		result.skipped and "Finished (skipped)" or "Course complete!",
 		{ Size = UDim2.new(1, 0, 0, 36), TextColor3 = T.Gold, LayoutOrder = nextOrder(), Parent = resultBody }
 	)
-	UI.label(
-		result.name,
-		{
-			Size = UDim2.new(1, 0, 0, 22),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			LayoutOrder = nextOrder(),
-			Parent = resultBody,
-		}
-	)
+	UI.label(result.name, {
+		Size = UDim2.new(1, 0, 0, 22),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		LayoutOrder = nextOrder(),
+		Parent = resultBody,
+	})
 
 	-- Three stars, the new ones pop in
 	local starRow = UI.new(
@@ -266,15 +299,12 @@ local function showResult(result)
 	starRow:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Center
 	for index = 1, 3 do
 		local have = index <= result.stars
-		local star = UI.label(
-			STAR,
-			{
-				Size = UDim2.fromOffset(56, 56),
-				TextColor3 = have and T.Gold or Color3.fromRGB(70, 80, 100),
-				LayoutOrder = index,
-				Parent = starRow,
-			}
-		)
+		local star = UI.label(STAR, {
+			Size = UDim2.fromOffset(56, 56),
+			TextColor3 = have and T.Gold or Color3.fromRGB(70, 80, 100),
+			LayoutOrder = index,
+			Parent = starRow,
+		})
 		if have and index > result.starsBefore then
 			local scale = UI.new("UIScale", { Scale = 0.1, Parent = star })
 			task.delay(0.25 * (index - result.starsBefore), function()
@@ -290,16 +320,13 @@ local function showResult(result)
 		gems += bit32.band(bit32.rshift(result.gems or 0, index), 1)
 	end
 	table.insert(why, string.format("All 3 gems (%d/3)", gems))
-	UI.label(
-		table.concat(why, "   " .. STAR .. "   "),
-		{
-			Size = UDim2.new(1, 0, 0, 18),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			LayoutOrder = nextOrder(),
-			Parent = resultBody,
-		}
-	)
+	UI.label(table.concat(why, "   " .. STAR .. "   "), {
+		Size = UDim2.new(1, 0, 0, 18),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		LayoutOrder = nextOrder(),
+		Parent = resultBody,
+	})
 
 	local timeText = "Time " .. RunHud.Time(result.time)
 	if result.newBest then
@@ -307,26 +334,20 @@ local function showResult(result)
 	elseif result.best then
 		timeText ..= "  -  Best " .. RunHud.Time(result.best)
 	end
-	UI.label(
-		timeText,
-		{
-			Size = UDim2.new(1, 0, 0, 28),
-			TextColor3 = result.newBest and T.Good or T.Text,
+	UI.label(timeText, {
+		Size = UDim2.new(1, 0, 0, 28),
+		TextColor3 = result.newBest and T.Good or T.Text,
+		LayoutOrder = nextOrder(),
+		Parent = resultBody,
+	})
+	if result.skipped then
+		UI.label("Skipped runs don't give stars. Try again without skipping!", {
+			Size = UDim2.new(1, 0, 0, 18),
+			Font = T.BodyFont,
+			TextColor3 = T.Muted,
 			LayoutOrder = nextOrder(),
 			Parent = resultBody,
-		}
-	)
-	if result.skipped then
-		UI.label(
-			"Skipped runs don't give stars. Try again without skipping!",
-			{
-				Size = UDim2.new(1, 0, 0, 18),
-				Font = T.BodyFont,
-				TextColor3 = T.Muted,
-				LayoutOrder = nextOrder(),
-				Parent = resultBody,
-			}
-		)
+		})
 	end
 	UI.label(
 		string.format("+%s coins   +%s XP", Format.Number(result.coins or 0), Format.Number(result.xp or 0)),
@@ -363,6 +384,87 @@ local function showResult(result)
 	refreshBar()
 end
 
+-- The buttons under a result: each is { text, color, width, onClick }
+local function resultButtons(order, list)
+	local row = UI.new(
+		"Frame",
+		{ Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, LayoutOrder = order, Parent = resultBody },
+		{ UI.list(10, Enum.FillDirection.Horizontal) }
+	)
+	row:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Center
+	for index, info in ipairs(list) do
+		UI.button(info[1], info[2], function()
+			resultCard.Visible = false
+			refreshBar()
+			info[4]()
+		end, { Size = UDim2.fromOffset(info[3], 44), LayoutOrder = index, Parent = row })
+	end
+end
+
+showDailyResult = function(result)
+	UI.clear(resultBody)
+	UI.list(8).Parent = resultBody
+	resultBody:FindFirstChildOfClass("UIListLayout").HorizontalAlignment = Enum.HorizontalAlignment.Center
+	UI.label(
+		"Daily Challenge",
+		{ Size = UDim2.new(1, 0, 0, 36), TextColor3 = T.Gold, LayoutOrder = 1, Parent = resultBody }
+	)
+	UI.label(result.name, {
+		Size = UDim2.new(1, 0, 0, 22),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		LayoutOrder = 2,
+		Parent = resultBody,
+	})
+	local timeText = "Time " .. RunHud.Time(result.time)
+	if result.newBest then
+		timeText ..= "  -  Your best today!"
+	elseif result.best then
+		timeText ..= "  -  Today's best " .. RunHud.Time(result.best)
+	end
+	UI.label(timeText, {
+		Size = UDim2.new(1, 0, 0, 34),
+		TextColor3 = result.newBest and T.Good or T.Text,
+		LayoutOrder = 3,
+		Parent = resultBody,
+	})
+	UI.label(
+		result.skipped and "Skipped runs don't count for the board."
+			or "A new course every day. Beat your time and climb the board!",
+		{
+			Size = UDim2.new(1, 0, 0, 20),
+			Font = T.BodyFont,
+			TextColor3 = T.Muted,
+			LayoutOrder = 4,
+			Parent = resultBody,
+		}
+	)
+	UI.label(
+		string.format("+%s coins   +%s XP", Format.Number(result.coins or 0), Format.Number(result.xp or 0)),
+		{ Size = UDim2.new(1, 0, 0, 28), TextColor3 = T.Gold, LayoutOrder = 5, Parent = resultBody }
+	)
+	resultButtons(6, {
+		{
+			"Try again",
+			T.Accent,
+			160,
+			function()
+				act("PlayDaily")
+			end,
+		},
+		{
+			"Plaza",
+			T.Card,
+			110,
+			function()
+				act("LeaveCourse")
+			end,
+		},
+	})
+	resultCard.Visible = true
+	refreshBar()
+end
+
 local function buildResult(screenGui)
 	resultCard = UI.new("Frame", {
 		Name = "ResultCard",
@@ -375,15 +477,12 @@ local function buildResult(screenGui)
 		ZIndex = 5,
 		Parent = screenGui,
 	}, { UI.corner(16), UI.stroke(T.Gold, 3) })
-	resultBody = UI.new(
-		"Frame",
-		{
-			Position = UDim2.fromOffset(16, 14),
-			Size = UDim2.new(1, -32, 1, -28),
-			BackgroundTransparency = 1,
-			Parent = resultCard,
-		}
-	)
+	resultBody = UI.new("Frame", {
+		Position = UDim2.fromOffset(16, 14),
+		Size = UDim2.new(1, -32, 1, -28),
+		BackgroundTransparency = 1,
+		Parent = resultCard,
+	})
 end
 
 ------------------------------------------------------------------ Start
@@ -396,6 +495,7 @@ function RunHud.Init(screenGui)
 			run = info
 			resultCard.Visible = false
 			applyWorld(info.world)
+			loadGhost()
 		elseif event == "update" then
 			if run then
 				local finalTime = run.finalTime
@@ -404,11 +504,14 @@ function RunHud.Init(screenGui)
 			else
 				run = info
 			end
+			Ghost.SetStart(run.started)
 		elseif event == "leave" then
 			run = nil
 			resultCard.Visible = false
 			applyWorld(nil)
 			Movement.SetGems({})
+			ghostToken += 1
+			Ghost.Clear()
 		elseif event == "result" then
 			if run then
 				run.finalTime = info.time

@@ -95,7 +95,10 @@ local SKIP_TAGS = { "Hit", "Kill", "Gem", "FakeDoor", "Wind" }
 local function standingSpots(course)
 	local points = {}
 	for _, part in ipairs(course.folder:GetDescendants()) do
-		if part:IsA("BasePart") and (part.CanCollide or CollectionService:HasTag(part, "Bounce")) then
+		if
+			part:IsA("BasePart")
+			and (part.CanCollide or CollectionService:HasTag(part, "Bounce") or CollectionService:HasTag(part, "Zip"))
+		then
 			local skip = false
 			for _, tag in ipairs(SKIP_TAGS) do
 				if CollectionService:HasTag(part, tag) then
@@ -229,7 +232,11 @@ local function search(points, cells, starts, gravity, allowDive, trusses)
 		-- Trusses: climb from beside them to their top
 		for _, truss in ipairs(trusses) do
 			local offset = truss.CFrame:PointToObjectSpace(a.pos)
-			if math.abs(offset.X) < truss.Size.X / 2 + 3 and math.abs(offset.Z) < truss.Size.Z / 2 + 3 and a.pos.Y < truss.Position.Y + truss.Size.Y / 2 then
+			if
+				math.abs(offset.X) < truss.Size.X / 2 + 3
+				and math.abs(offset.Z) < truss.Size.Z / 2 + 3
+				and a.pos.Y < truss.Position.Y + truss.Size.Y / 2
+			then
 				for _, index in ipairs(near(cells, truss.Position, math.max(truss.Size.X, truss.Size.Z) + 4)) do
 					if not seen[index] and points[index].part == truss then
 						seen[index] = true
@@ -318,10 +325,26 @@ local function check(courseData)
 				end
 			end
 			local at = best.pos
-			print(string.format("  stuck at %s on %s (size %s)", tostring(at), best.part and best.part.Name or "?", best.part and tostring(best.part.Size) or ""))
+			print(
+				string.format(
+					"  stuck at %s on %s (size %s)",
+					tostring(at),
+					best.part and best.part.Name or "?",
+					best.part and tostring(best.part.Size) or ""
+				)
+			)
 			for _, part in ipairs(course.folder:GetDescendants()) do
 				if part:IsA("BasePart") and (part.Position - at).Magnitude < 40 then
-					print(string.format("    %-12s pos %s size %s collide %s tags %s", part.Name, tostring(part.Position - at), tostring(part.Size), tostring(part.CanCollide), table.concat(CollectionService:GetTagged("Moving")[1] and {} or {}, ",")))
+					print(
+						string.format(
+							"    %-12s pos %s size %s collide %s tags %s",
+							part.Name,
+							tostring(part.Position - at),
+							tostring(part.Size),
+							tostring(part.CanCollide),
+							table.concat(CollectionService:GetTagged("Moving")[1] and {} or {}, ",")
+						)
+					)
 				end
 			end
 		end
@@ -355,6 +378,19 @@ local function check(courseData)
 				if Vector3.new(delta.X, 0, delta.Z).Magnitude <= 4 and delta.Y >= -4.5 and delta.Y <= reachUp then
 					found = true
 					foundEasy = foundEasy or easy[spot] == true
+				end
+			end
+		end
+		-- Grabbed while riding a zipline (your middle follows the line)
+		for spot, point in ipairs(points) do
+			if not foundEasy and dive[spot] and point.zipTo and point.part then
+				local from = point.part:GetAttribute("ZipFrom")
+				for k = 0, 40 do
+					local at = from:Lerp(point.zipTo, k / 40)
+					if (at - gem).Magnitude <= 4.5 then
+						found = true
+						foundEasy = foundEasy or easy[spot] == true
+					end
 				end
 			end
 		end
@@ -394,7 +430,9 @@ local function check(courseData)
 	end
 	local length = (course.endCursor.Position - origin.Position).Magnitude
 	course.folder:Destroy()
-	return problems, notes, { par = course.par, parts = parts, checkpoints = #course.checkpoints, length = length, spots = #points }
+	return problems,
+		notes,
+		{ par = course.par, parts = parts, checkpoints = #course.checkpoints, length = length, spots = #points }
 end
 
 ------------------------------------------------------------------ Run
@@ -413,7 +451,18 @@ for _, courseData in ipairs(Courses.List) do
 			if #problems > 0 then
 				failed += 1
 			end
-			print(string.format("%s %-10s %-24s par %3ds  %d checkpoints  %4d parts  %4d studs", status, courseData.id, courseData.name, info.par, info.checkpoints, info.parts, math.floor(info.length)))
+			print(
+				string.format(
+					"%s %-10s %-24s par %3ds  %d checkpoints  %4d parts  %4d studs",
+					status,
+					courseData.id,
+					courseData.name,
+					info.par,
+					info.checkpoints,
+					info.parts,
+					math.floor(info.length)
+				)
+			)
 			for _, text in ipairs(problems) do
 				print("        problem: " .. text)
 			end

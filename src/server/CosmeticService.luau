@@ -84,172 +84,107 @@ function CosmeticService.BuildHammer(model, item, scale)
 	local upright = CFrame.Angles(0, 0, math.rad(90)) -- a cylinder's length runs up and down
 
 	if item.shape == "chicken" then
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Legs",
-				Shape = Enum.PartType.Cylinder,
-				Size = Vector3.new(2 * s, 0.3, 0.3),
-				CFrame = CFrame.new(0, 0, -0.9 * s) * forward,
-				Color = item.handle,
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Head",
-				Mesh = true,
-				Size = Vector3.new(1.4, 1.4, 3.2) * s,
-				CFrame = CFrame.new(0, 0, -3.4 * s),
-				Color = item.head,
-				Material = item.material,
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Neck",
-				Mesh = true,
-				Size = Vector3.new(0.8, 0.8, 1.8) * s,
-				CFrame = CFrame.new(0, 0.3 * s, -5.3 * s) * CFrame.Angles(math.rad(-20), 0, 0),
-				Color = item.head,
-				Material = item.material,
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Comb",
-				Size = Vector3.new(0.2, 0.6, 0.8) * s,
-				CFrame = CFrame.new(0, 0.85 * s, -6 * s),
-				Color = Color3.fromRGB(230, 40, 40),
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Beak",
-				Size = Vector3.new(0.4, 0.3, 0.6) * s,
-				CFrame = CFrame.new(0, 0.5 * s, -6.6 * s),
-				Color = item.handle,
-			}
-		)
+		piece(hammer, hand, gripY, {
+			Name = "Legs",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(2 * s, 0.3, 0.3),
+			CFrame = CFrame.new(0, 0, -0.9 * s) * forward,
+			Color = item.handle,
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Head",
+			Mesh = true,
+			Size = Vector3.new(1.4, 1.4, 3.2) * s,
+			CFrame = CFrame.new(0, 0, -3.4 * s),
+			Color = item.head,
+			Material = item.material,
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Neck",
+			Mesh = true,
+			Size = Vector3.new(0.8, 0.8, 1.8) * s,
+			CFrame = CFrame.new(0, 0.3 * s, -5.3 * s) * CFrame.Angles(math.rad(-20), 0, 0),
+			Color = item.head,
+			Material = item.material,
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Comb",
+			Size = Vector3.new(0.2, 0.6, 0.8) * s,
+			CFrame = CFrame.new(0, 0.85 * s, -6 * s),
+			Color = Color3.fromRGB(230, 40, 40),
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Beak",
+			Size = Vector3.new(0.4, 0.3, 0.6) * s,
+			CFrame = CFrame.new(0, 0.5 * s, -6.6 * s),
+			Color = item.handle,
+		})
 	elseif item.shape == "fish" then
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Tail",
-				Size = Vector3.new(0.2, 1.4, 1) * s,
-				CFrame = CFrame.new(0, 0, -0.3 * s),
-				Color = item.handle,
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Head",
-				Mesh = true,
-				Size = Vector3.new(1, 1.8, 4.2) * s,
-				CFrame = CFrame.new(0, 0, -2.9 * s),
-				Color = item.head,
-				Material = item.material,
-			}
-		)
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Fin",
-				Size = Vector3.new(0.15, 0.8, 1.2) * s,
-				CFrame = CFrame.new(0, 0.95 * s, -2.8 * s),
-				Color = item.handle,
-			}
-		)
+		piece(hammer, hand, gripY, {
+			Name = "Tail",
+			Size = Vector3.new(0.2, 1.4, 1) * s,
+			CFrame = CFrame.new(0, 0, -0.3 * s),
+			Color = item.handle,
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Head",
+			Mesh = true,
+			Size = Vector3.new(1, 1.8, 4.2) * s,
+			CFrame = CFrame.new(0, 0, -2.9 * s),
+			Color = item.head,
+			Material = item.material,
+		})
+		piece(hammer, hand, gripY, {
+			Name = "Fin",
+			Size = Vector3.new(0.15, 0.8, 1.2) * s,
+			CFrame = CFrame.new(0, 0.95 * s, -2.8 * s),
+			Color = item.handle,
+		})
 		for _, side in ipairs({ -1, 1 }) do
-			piece(
-				hammer,
-				hand,
-				gripY,
-				{
-					Name = "Eye",
-					Shape = Enum.PartType.Ball,
-					Size = Vector3.one * 0.35 * s,
-					CFrame = CFrame.new(0.42 * side * s, 0.25 * s, -4.4 * s),
-					Color = Color3.new(1, 1, 1),
-				}
-			)
+			piece(hammer, hand, gripY, {
+				Name = "Eye",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * 0.35 * s,
+				CFrame = CFrame.new(0.42 * side * s, 0.25 * s, -4.4 * s),
+				Color = Color3.new(1, 1, 1),
+			})
 		end
 	else
-		piece(
-			hammer,
-			hand,
-			gripY,
-			{
-				Name = "Handle",
-				Shape = Enum.PartType.Cylinder,
-				Size = Vector3.new(3.4 * s, 0.35 * s, 0.35 * s),
-				CFrame = CFrame.new(0, 0, -1.4 * s) * forward,
-				Color = item.handle,
-				Material = item.material == Enum.Material.Neon and Enum.Material.SmoothPlastic or item.material,
-			}
-		)
+		piece(hammer, hand, gripY, {
+			Name = "Handle",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(3.4 * s, 0.35 * s, 0.35 * s),
+			CFrame = CFrame.new(0, 0, -1.4 * s) * forward,
+			Color = item.handle,
+			Material = item.material == Enum.Material.Neon and Enum.Material.SmoothPlastic or item.material,
+		})
 		if item.shape == "mallet" then
-			piece(
-				hammer,
-				hand,
-				gripY,
-				{
-					Name = "Head",
-					Size = Vector3.new(1.5, 2.6, 1.5) * s,
-					CFrame = CFrame.new(0, 0, -3.3 * s),
-					Color = item.head,
-					Material = item.material,
-				}
-			)
+			piece(hammer, hand, gripY, {
+				Name = "Head",
+				Size = Vector3.new(1.5, 2.6, 1.5) * s,
+				CFrame = CFrame.new(0, 0, -3.3 * s),
+				Color = item.head,
+				Material = item.material,
+			})
 		else
-			piece(
-				hammer,
-				hand,
-				gripY,
-				{
-					Name = "Head",
-					Shape = Enum.PartType.Cylinder,
-					Size = Vector3.new(2.6 * s, 1.6 * s, 1.6 * s),
-					CFrame = CFrame.new(0, 0, -3.3 * s) * upright,
-					Color = item.head,
-					Material = item.material,
-				}
-			)
+			piece(hammer, hand, gripY, {
+				Name = "Head",
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(2.6 * s, 1.6 * s, 1.6 * s),
+				CFrame = CFrame.new(0, 0, -3.3 * s) * upright,
+				Color = item.head,
+				Material = item.material,
+			})
 			for _, side in ipairs({ -1, 1 }) do
-				piece(
-					hammer,
-					hand,
-					gripY,
-					{
-						Name = "Cap",
-						Shape = Enum.PartType.Cylinder,
-						Size = Vector3.new(0.25 * s, 1.75 * s, 1.75 * s),
-						CFrame = CFrame.new(0, 1.3 * side * s, -3.3 * s) * upright,
-						Color = item.handle,
-						Material = item.material == Enum.Material.Neon and Enum.Material.Neon
-							or Enum.Material.SmoothPlastic,
-					}
-				)
+				piece(hammer, hand, gripY, {
+					Name = "Cap",
+					Shape = Enum.PartType.Cylinder,
+					Size = Vector3.new(0.25 * s, 1.75 * s, 1.75 * s),
+					CFrame = CFrame.new(0, 1.3 * side * s, -3.3 * s) * upright,
+					Color = item.handle,
+					Material = item.material == Enum.Material.Neon and Enum.Material.Neon
+						or Enum.Material.SmoothPlastic,
+				})
 			end
 		end
 	end

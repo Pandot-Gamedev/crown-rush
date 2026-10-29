@@ -456,19 +456,15 @@ function MapBuilder.Build()
 
 	-- The Daily Challenge gate to the east
 	local dailyCFrame = CFrame.lookAt(Vector3.new(66, 0, 34), Vector3.new(0, 0, 0)) * CFrame.Angles(0, math.pi, 0)
-	local daily = worldGate(
-		map,
-		{
-			id = "daily",
-			name = "Daily Challenge",
-			stars = 0,
-			edge = Color3.fromRGB(70, 200, 255),
-			accent = Color3.fromRGB(255, 255, 255),
-			mover = Color3.fromRGB(110, 230, 255),
-			floor = { Color3.fromRGB(200, 240, 255) },
-		},
-		dailyCFrame
-	)
+	local daily = worldGate(map, {
+		id = "daily",
+		name = "Daily Challenge",
+		stars = 0,
+		edge = Color3.fromRGB(70, 200, 255),
+		accent = Color3.fromRGB(255, 255, 255),
+		mover = Color3.fromRGB(110, 230, 255),
+		floor = { Color3.fromRGB(200, 240, 255) },
+	}, dailyCFrame)
 	daily:SetAttribute("WorldGate", nil)
 	daily:SetAttribute("DailyGate", true)
 

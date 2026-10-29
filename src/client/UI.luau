@@ -42,14 +42,11 @@ function UI.corner(radius)
 end
 
 function UI.stroke(color, thickness)
-	return UI.new(
-		"UIStroke",
-		{
-			Color = color or Color3.new(0, 0, 0),
-			Thickness = thickness or 2,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		}
-	)
+	return UI.new("UIStroke", {
+		Color = color or Color3.new(0, 0, 0),
+		Thickness = thickness or 2,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
 end
 
 function UI.padding(pixels)
@@ -81,30 +78,23 @@ function UI.label(text, props)
 end
 
 function UI.button(text, color, onClick, props)
-	local button = UI.new(
-		"TextButton",
-		{
-			Text = text,
-			BackgroundColor3 = color or T.Accent,
-			TextColor3 = T.Text,
-			Font = T.Font,
-			TextScaled = true,
-			AutoButtonColor = true,
-			Size = UDim2.fromOffset(120, 40),
-		},
-		{
-			UI.corner(8),
-			UI.new(
-				"UIPadding",
-				{
-					PaddingTop = UDim.new(0, 6),
-					PaddingBottom = UDim.new(0, 6),
-					PaddingLeft = UDim.new(0, 8),
-					PaddingRight = UDim.new(0, 8),
-				}
-			),
-		}
-	)
+	local button = UI.new("TextButton", {
+		Text = text,
+		BackgroundColor3 = color or T.Accent,
+		TextColor3 = T.Text,
+		Font = T.Font,
+		TextScaled = true,
+		AutoButtonColor = true,
+		Size = UDim2.fromOffset(120, 40),
+	}, {
+		UI.corner(8),
+		UI.new("UIPadding", {
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
+		}),
+	})
 	for key, value in pairs(props or {}) do
 		button[key] = value
 	end
@@ -143,15 +133,12 @@ function UI.window(screenGui, title, render)
 		Parent = screenGui,
 	}, { UI.corner(16), UI.stroke(T.Background, 4) })
 
-	UI.label(
-		title,
-		{
-			Position = UDim2.fromOffset(20, 12),
-			Size = UDim2.new(1, -90, 0, 36),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = frame,
-		}
-	)
+	UI.label(title, {
+		Position = UDim2.fromOffset(20, 12),
+		Size = UDim2.new(1, -90, 0, 36),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = frame,
+	})
 
 	local body = UI.new("ScrollingFrame", {
 		Name = "Body",

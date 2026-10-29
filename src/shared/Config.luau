@@ -40,6 +40,8 @@ Config.MinTimeShare = 0.35 -- a finish faster than this share of par is ignored 
 Config.CourseRewards = { finish = 25, firstFinish = 60, star = 40, gem = 15 }
 Config.CourseXp = { finish = 40, firstFinish = 80, star = 30, gem = 10 }
 Config.VipCoinBonus = 0.25
+Config.DailyChallengeCoins = 150 -- first finish of the Daily Challenge each day
+Config.DailyChallengeXp = 120
 
 -- Daily login reward: DailyRewardBase * streak day (streak capped at 7)
 Config.DailyRewardBase = 50

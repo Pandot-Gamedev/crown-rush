@@ -26,3 +26,14 @@ Test helpers (Studio only) are listed at the bottom of `src/server/init.server.l
 Courses are lists of obstacle pieces in `src/shared/Courses.luau`. The pieces
 are built by `src/server/Kit.luau`; a course is built in the sky when someone
 plays it.
+
+## Checks (run before every push)
+
+These need [Lune](https://lune-org.github.io/docs) and run the real game code
+outside Roblox with a small stand-in for Roblox (`tools/check/mock.luau`):
+
+- `lune run tools/check/courses.luau` builds every course and proves the
+  finish and all gems can be reached from the start and every checkpoint.
+- `lune run tools/check/server.luau` starts the whole server.
+- `lune run tools/check/play.luau` plays the first world and the Daily
+  Challenge with a pretend player and checks the save.

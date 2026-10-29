@@ -65,69 +65,56 @@ local function row(parent, height, order)
 end
 
 local function heading(parent, text, order)
-	UI.label(
-		text,
-		{
-			Size = UDim2.new(1, -8, 0, 30),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = T.Gold,
-			LayoutOrder = order,
-			Parent = parent,
-		}
-	)
+	UI.label(text, {
+		Size = UDim2.new(1, -8, 0, 30),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = T.Gold,
+		LayoutOrder = order,
+		Parent = parent,
+	})
 end
 
 local function note(parent, text, order)
-	UI.label(
-		text,
-		{
-			Size = UDim2.new(1, -8, 0, 20),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			TextWrapped = true,
-			LayoutOrder = order,
-			Parent = parent,
-		}
-	)
+	UI.label(text, {
+		Size = UDim2.new(1, -8, 0, 20),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		TextWrapped = true,
+		LayoutOrder = order,
+		Parent = parent,
+	})
 end
 
 -- A small colour swatch so you can tell items apart at a glance
 -- An item's name on its card, all at the same size whether it's short or long
 local function itemName(card, text, width)
-	local label = UI.label(
-		text,
-		{
-			Position = UDim2.fromOffset(48, 0),
-			Size = UDim2.new(width, 0, 1, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = card,
-		}
-	)
+	local label = UI.label(text, {
+		Position = UDim2.fromOffset(48, 0),
+		Size = UDim2.new(width, 0, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = card,
+	})
 	UI.new("UITextSizeConstraint", { MaxTextSize = 20, Parent = label })
 	return label
 end
 
 local function swatch(card, item)
 	local color = item.head or item.color or (item.colors and item.colors[1]) or T.Muted
-	UI.new(
-		"Frame",
-		{ Position = UDim2.fromOffset(10, 12), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = color, Parent = card },
-		{ UI.corner(14), UI.stroke(T.Background, 2) }
-	)
+	UI.new("Frame", {
+		Position = UDim2.fromOffset(10, 12),
+		Size = UDim2.fromOffset(28, 28),
+		BackgroundColor3 = color,
+		Parent = card,
+	}, { UI.corner(14), UI.stroke(T.Background, 2) })
 end
 
 local function cardButton(card, text, color, onClick)
-	return UI.button(
-		text,
-		color,
-		onClick,
-		{
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -12, 0.5, 0),
-			Size = UDim2.fromOffset(150, 36),
-			Parent = card,
-		}
-	)
+	return UI.button(text, color, onClick, {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -12, 0.5, 0),
+		Size = UDim2.fromOffset(150, 36),
+		Parent = card,
+	})
 end
 
 ------------------------------------------------------------------ Shop (Robux)
@@ -147,26 +134,20 @@ local function renderShop(body)
 	heading(body, "Game pass (yours forever)", nextOrder())
 	for _, pass in ipairs(Shop.Passes) do
 		local card = row(body, 64, nextOrder())
-		UI.label(
-			pass.name,
-			{
-				Position = UDim2.fromOffset(12, 6),
-				Size = UDim2.new(0.6, 0, 0, 26),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Parent = card,
-			}
-		)
-		UI.label(
-			pass.description,
-			{
-				Position = UDim2.fromOffset(12, 34),
-				Size = UDim2.new(0.68, 0, 0, 20),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Font = T.BodyFont,
-				TextColor3 = T.Muted,
-				Parent = card,
-			}
-		)
+		UI.label(pass.name, {
+			Position = UDim2.fromOffset(12, 6),
+			Size = UDim2.new(0.6, 0, 0, 26),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+		UI.label(pass.description, {
+			Position = UDim2.fromOffset(12, 34),
+			Size = UDim2.new(0.68, 0, 0, 20),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = T.BodyFont,
+			TextColor3 = T.Muted,
+			Parent = card,
+		})
 		local button = cardButton(card, "...", T.Good)
 		if State.HasPass(pass.id) then
 			button.Text = "Owned"
@@ -324,35 +305,24 @@ local function renderQuests(body)
 		local quest = Quests.ById[entry.id]
 		if quest then
 			local card = row(body, 64, index)
-			UI.label(
-				Quests.Text(entry),
-				{
-					Position = UDim2.fromOffset(12, 6),
-					Size = UDim2.new(0.62, 0, 0, 26),
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextColor3 = entry.done and T.Good or T.Text,
-					Parent = card,
-				}
-			)
-			local back = UI.new(
-				"Frame",
-				{
-					Position = UDim2.fromOffset(12, 40),
-					Size = UDim2.new(0.62, 0, 0, 12),
-					BackgroundColor3 = T.Background,
-					Parent = card,
-				},
-				{ UI.corner(6) }
-			)
-			UI.new(
-				"Frame",
-				{
-					Size = UDim2.fromScale(math.clamp(entry.progress / entry.goal, 0, 1), 1),
-					BackgroundColor3 = entry.done and T.Good or T.Accent,
-					Parent = back,
-				},
-				{ UI.corner(6) }
-			)
+			UI.label(Quests.Text(entry), {
+				Position = UDim2.fromOffset(12, 6),
+				Size = UDim2.new(0.62, 0, 0, 26),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = entry.done and T.Good or T.Text,
+				Parent = card,
+			})
+			local back = UI.new("Frame", {
+				Position = UDim2.fromOffset(12, 40),
+				Size = UDim2.new(0.62, 0, 0, 12),
+				BackgroundColor3 = T.Background,
+				Parent = card,
+			}, { UI.corner(6) })
+			UI.new("Frame", {
+				Size = UDim2.fromScale(math.clamp(entry.progress / entry.goal, 0, 1), 1),
+				BackgroundColor3 = entry.done and T.Good or T.Accent,
+				Parent = back,
+			}, { UI.corner(6) })
 			UI.label(
 				entry.done and "Done!" or string.format("%d/%d  -  %d coins", entry.progress, entry.goal, quest.coins),
 				{
@@ -411,13 +381,124 @@ local function clock(seconds)
 	return string.format("%d:%02d.%02d", math.floor(whole / 60), whole % 60, math.floor((seconds - whole) * 100))
 end
 
+-- Answers from the server, fetched in the background and cached for a minute
+local answers = {}
+local function ask(name, argument, onReady)
+	local key = name .. ":" .. tostring(argument)
+	local cached = answers[key]
+	if cached and os.clock() - cached.at < 60 then
+		return cached.value
+	end
+	if not cached or not cached.loading then
+		answers[key] = { at = cached and cached.at or 0, value = cached and cached.value, loading = true }
+		task.spawn(function()
+			local ok, value = pcall(function()
+				return Remotes.Ask:InvokeServer(name, argument)
+			end)
+			answers[key] = { at = os.clock(), value = ok and value or nil }
+			onReady()
+		end)
+	end
+	return cached and cached.value or nil
+end
+
+local timesFor = nil -- a course id: the window shows its best times
+
+local function renderTimes(body, course)
+	UI.list(8).Parent = body
+	UI.button("< Back", T.Card, function()
+		timesFor = nil
+		Panels.Courses.refresh()
+	end, { Size = UDim2.fromOffset(110, 34), LayoutOrder = 0, Parent = body })
+	heading(body, "Best times: " .. course.name, 1)
+	local answer = ask("Times", course.id, function()
+		Panels.Courses.refresh()
+	end)
+	if not answer then
+		note(body, "Loading...", 2)
+		return
+	end
+	if #answer.top == 0 then
+		note(body, "No times yet. Set the first one!", 2)
+	end
+	for rank, entry in ipairs(answer.top) do
+		local card = row(body, 36, rank + 2)
+		UI.label(string.format("%d. %s", rank, entry.name), {
+			Position = UDim2.fromOffset(12, 0),
+			Size = UDim2.new(0.6, 0, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = rank == 1 and T.Gold or T.Text,
+			Parent = card,
+		})
+		UI.label(clock(entry.time), {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, 0),
+			Size = UDim2.new(0.3, 0, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Parent = card,
+		})
+	end
+	note(body, answer.mine and ("Your best: " .. clock(answer.mine)) or "You haven't finished this course yet.", 20)
+	note(body, "On the course, the Ghost button races your best run or the record.", 21)
+end
+
+local function dailyCard(body, order)
+	local answer = ask("Daily", nil, function()
+		Panels.Courses.refresh()
+	end)
+	local card = row(body, 64, order)
+	card.BackgroundColor3 = Color3.fromRGB(70, 50, 110)
+	if not answer then
+		UI.label("Daily Challenge: loading...", {
+			Position = UDim2.fromOffset(12, 0),
+			Size = UDim2.new(0.6, 0, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+		return
+	end
+	local world = Worlds.ById[answer.world]
+	UI.label("Daily Challenge: " .. answer.name, {
+		Position = UDim2.fromOffset(12, 6),
+		Size = UDim2.new(0.62, 0, 0, 26),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = T.Gold,
+		Parent = card,
+	})
+	local leader = answer.top[1]
+	local detail = answer.best and ("Your best today " .. clock(answer.best))
+		or string.format("First finish today: %d coins", answer.coins)
+	if leader then
+		detail ..= string.format("   Top: %s %s", leader.name, clock(leader.time))
+	end
+	UI.label(detail, {
+		Position = UDim2.fromOffset(12, 36),
+		Size = UDim2.new(0.62, 0, 0, 20),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Font = T.BodyFont,
+		TextColor3 = world and world.accent or T.Muted,
+		Parent = card,
+	})
+	cardButton(card, "Play daily", Color3.fromRGB(170, 100, 255), function()
+		if act("PlayDaily") then
+			Panels.Courses.close()
+		end
+	end)
+end
+
 local function renderCourses(body)
 	local data = State.data
 	if not data then
 		return
 	end
+	local timesCourse = timesFor and Courses.ById[timesFor]
+	if timesCourse then
+		renderTimes(body, timesCourse)
+		return
+	end
 	UI.list(8).Parent = body
 	local total = Courses.TotalStars(data.adventure)
+	dailyCard(body, -1)
 
 	local tabs = UI.new(
 		"Frame",
@@ -475,7 +556,7 @@ local function renderCourses(body)
 		local card = row(body, 64, index + 1)
 		UI.label(string.format("%d. %s%s", course.number, course.name, course.boss and "  (boss)" or ""), {
 			Position = UDim2.fromOffset(12, 6),
-			Size = UDim2.new(0.62, 0, 0, 26),
+			Size = UDim2.new(0.5, 0, 0, 26),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextColor3 = open and (course.boss and world.accent or T.Text) or T.Muted,
 			Parent = card,
@@ -487,17 +568,14 @@ local function renderCourses(body)
 		if record and record.best then
 			detail ..= "   Best " .. clock(record.best)
 		end
-		UI.label(
-			detail,
-			{
-				Position = UDim2.fromOffset(12, 36),
-				Size = UDim2.new(0.62, 0, 0, 20),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Font = T.BodyFont,
-				TextColor3 = stars > 0 and T.Gold or T.Muted,
-				Parent = card,
-			}
-		)
+		UI.label(detail, {
+			Position = UDim2.fromOffset(12, 36),
+			Size = UDim2.new(0.5, 0, 0, 20),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = T.BodyFont,
+			TextColor3 = stars > 0 and T.Gold or T.Muted,
+			Parent = card,
+		})
 		if open then
 			cardButton(
 				card,
@@ -509,6 +587,15 @@ local function renderCourses(body)
 					end
 				end
 			)
+			UI.button("Times", T.Card, function()
+				timesFor = course.id
+				Panels.Courses.refresh()
+			end, {
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -170, 0.5, 0),
+				Size = UDim2.fromOffset(76, 36),
+				Parent = card,
+			})
 		else
 			cardButton(card, "Locked", T.Card, function()
 				local previous = Courses.Previous(course.id)
@@ -538,6 +625,7 @@ function Panels.Init(screenGui)
 	Remotes.OpenPanel.OnClientEvent:Connect(function(name, argument)
 		if name == "Courses" and Worlds.ById[argument or ""] then
 			worldTab = argument
+			timesFor = nil
 		end
 		local panel = Panels[name]
 		if panel then

@@ -23,6 +23,8 @@ local CourseService = {}
 local SLOT_ORIGIN = Vector3.new(4000, 300, 0)
 local SLOT_SPACING = 1400
 local GEM_RADIUS = 4.5
+local TRAIL_STEP = 0.1 -- seconds between saved spots on a ghost path
+local TRAIL_MAX = 6000 -- numbers kept (about 2.5 minutes of running)
 
 local folder
 local slots = {} -- [index] = instance or nil
@@ -132,6 +134,7 @@ local function summary(run)
 		skipped = run.skipped,
 		par = course.par,
 		finished = run.finished,
+		origin = course.origin,
 	}
 end
 CourseService.Summary = summary
@@ -209,6 +212,7 @@ function CourseService.Enter(runner, instance, options)
 		onLeave = options.onLeave,
 		onPlaceBot = options.onPlaceBot,
 		frozen = options.frozen == true,
+		trail = options.record and {} or nil, -- { t, x, y, z, t, x, ... } for a ghost
 	}
 	runs[key] = run
 	instance.emptySince = nil
@@ -263,6 +267,10 @@ function CourseService.Restart(run)
 	run.fallsHere = 0
 	run.gems = {}
 	run.skipped = false
+	if run.trail then
+		run.trail = {}
+		run.trailLast = nil
+	end
 	setKillY(run)
 	placeRunner(run, run.instance.course.start.spawn)
 	send(run, "update", summary(run))
@@ -343,6 +351,20 @@ local function checkRun(run)
 		if line.Z < -0.5 then
 			run.started = now()
 			send(run, "update", summary(run))
+		end
+	end
+
+	-- The path for ghosts, in the course's own space (courses are built in different places)
+	if run.trail and run.started and not run.finished and #run.trail < TRAIL_MAX then
+		local t = now() - run.started
+		if t - (run.trailLast or -1) >= TRAIL_STEP then
+			run.trailLast = t
+			local spot = course.origin:PointToObjectSpace(position)
+			local trail = run.trail
+			trail[#trail + 1] = math.floor(t * 100 + 0.5) / 100
+			trail[#trail + 1] = math.floor(spot.X * 10 + 0.5) / 10
+			trail[#trail + 1] = math.floor(spot.Y * 10 + 0.5) / 10
+			trail[#trail + 1] = math.floor(spot.Z * 10 + 0.5) / 10
 		end
 	end
 

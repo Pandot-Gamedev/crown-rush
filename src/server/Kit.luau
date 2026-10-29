@@ -469,37 +469,29 @@ B.spinner = function(pc, o)
 	})
 	for index = 1, bars do
 		local home = center * CFrame.new(0, 1.4, 0)
-		pc:Mover(
-			{
-				Name = "SpinnerBar",
-				Size = Vector3.new(radius * 2 - 1, 1.2, 1.2),
-				Color = pc.theme.hazard,
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-				Attributes = { Low = true },
-			},
-			{
-				Motion = "spin",
-				Home = home,
-				Speed = speed * (o.reverse and -1 or 1),
-				Phase = (index - 1) * math.pi / bars,
-			},
-			{ "Hit" }
-		)
+		pc:Mover({
+			Name = "SpinnerBar",
+			Size = Vector3.new(radius * 2 - 1, 1.2, 1.2),
+			Color = pc.theme.hazard,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			Attributes = { Low = true },
+		}, {
+			Motion = "spin",
+			Home = home,
+			Speed = speed * (o.reverse and -1 or 1),
+			Phase = (index - 1) * math.pi / bars,
+		}, { "Hit" })
 	end
 	if o.high then
 		local home = center * CFrame.new(0, 6.5, 0)
-		pc:Mover(
-			{
-				Name = "HighBar",
-				Size = Vector3.new(radius * 2 - 1, 1.2, 1.2),
-				Color = pc.theme.hazard,
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-			},
-			{ Motion = "spin", Home = home, Speed = -speed * 0.8, Phase = math.pi / 2 },
-			{ "Hit" }
-		)
+		pc:Mover({
+			Name = "HighBar",
+			Size = Vector3.new(radius * 2 - 1, 1.2, 1.2),
+			Color = pc.theme.hazard,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+		}, { Motion = "spin", Home = home, Speed = -speed * 0.8, Phase = math.pi / 2 }, { "Hit" })
 	end
 	pc:Go(0, 0, z - radius + 2)
 	pc:Go(0, 0, z + radius - 2, { hazard = true })
@@ -554,18 +546,14 @@ B.hammers = function(pc, o)
 		)
 		local head = table.clone(motion)
 		head.Offset = CFrame.new(0, -15, 0) * CFrame.Angles(0, math.rad(90), 0) -- the head's length runs along the bridge
-		pc:Mover(
-			{
-				Name = "HammerHead",
-				Shape = Enum.PartType.Cylinder,
-				Size = Vector3.new(7, 4.5, 4.5),
-				Color = pc.theme.hazard,
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-			},
-			head,
-			{ "Hit" }
-		)
+		pc:Mover({
+			Name = "HammerHead",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(7, 4.5, 4.5),
+			Color = pc.theme.hazard,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+		}, head, { "Hit" })
 		pc:Go(0, 0, z, { hazard = true })
 	end
 	pc:Rails(0, 0, l, w)
@@ -606,26 +594,22 @@ B.balls = function(pc, o)
 		local top = pc:C(x, rise + radius, l)
 		local home = CFrame.lookAt(top.Position, pc:P(x, radius, 0))
 		for ball = 0, 1 do
-			pc:Mover(
-				{
-					Name = "Ball",
-					Shape = Enum.PartType.Ball,
-					Size = Vector3.one * radius * 2,
-					Color = pc.theme.hazard,
-					Material = Enum.Material.SmoothPlastic,
-					CanCollide = false,
-				},
-				{
-					Motion = "ball",
-					Home = home,
-					Length = slope + 6,
-					Travel = 2.6,
-					Period = period,
-					Phase = (lane - 1) * period / lanes + ball * period / 2,
-					Radius = radius,
-				},
-				{ "Hit" }
-			)
+			pc:Mover({
+				Name = "Ball",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * radius * 2,
+				Color = pc.theme.hazard,
+				Material = Enum.Material.SmoothPlastic,
+				CanCollide = false,
+			}, {
+				Motion = "ball",
+				Home = home,
+				Length = slope + 6,
+				Travel = 2.6,
+				Period = period,
+				Phase = (lane - 1) * period / lanes + ball * period / 2,
+				Radius = radius,
+			}, { "Hit" })
 		end
 	end
 	pc:Node({
@@ -691,15 +675,12 @@ B.blink = function(pc, o)
 			local x = -w / 2 + (col - 0.5) * (size + gap)
 			local z = 4 + (row - 0.5) * (size + gap)
 			local phase = ((row + col) % 3) * period / 3
-			local _, spec = pc:Mover(
-				{
-					Name = "BlinkTile",
-					Size = Vector3.new(size, 1.5, size),
-					Color = pc.theme.mover,
-					Material = Enum.Material.SmoothPlastic,
-				},
-				{ Motion = "blink", Home = pc:C(x, -0.75, z), Period = period, On = period * 0.65, Phase = phase }
-			)
+			local _, spec = pc:Mover({
+				Name = "BlinkTile",
+				Size = Vector3.new(size, 1.5, size),
+				Color = pc.theme.mover,
+				Material = Enum.Material.SmoothPlastic,
+			}, { Motion = "blink", Home = pc:C(x, -0.75, z), Period = period, On = period * 0.65, Phase = phase })
 			table.insert(tilesByRow[row], { spec = spec, at = pc:P(x, 0, z) })
 		end
 	end
@@ -747,7 +728,7 @@ end
 B.bounce = function(pc, o)
 	local rise = o.rise or 18
 	pc:Floor(0, 0, 6, 16, 12)
-	local speed = math.sqrt(2 * workspace.Gravity * (rise + 9))
+	local speed = math.sqrt(2 * (pc.theme.gravity or workspace.Gravity) * (rise + 9))
 	local pad = pc:Part({
 		Name = "BouncePad",
 		Shape = Enum.PartType.Cylinder,
@@ -868,21 +849,18 @@ B.seesaw = function(pc, o)
 	for index = 1, count do
 		z += 3
 		local zCenter = z + size / 2
-		local _, spec = pc:Mover(
-			{
-				Name = "Seesaw",
-				Size = Vector3.new(size, 1.5, size),
-				Color = pc.theme.mover,
-				Material = Enum.Material.SmoothPlastic,
-			},
-			{
-				Motion = "rock",
-				Home = pc:C(0, -0.75, zCenter),
-				Amp = math.rad(o.tilt or 14),
-				Period = period,
-				Phase = index * 0.9,
-			}
-		)
+		local _, spec = pc:Mover({
+			Name = "Seesaw",
+			Size = Vector3.new(size, 1.5, size),
+			Color = pc.theme.mover,
+			Material = Enum.Material.SmoothPlastic,
+		}, {
+			Motion = "rock",
+			Home = pc:C(0, -0.75, zCenter),
+			Amp = math.rad(o.tilt or 14),
+			Period = period,
+			Phase = index * 0.9,
+		})
 		pc:Part({
 			Name = "Pivot",
 			Shape = Enum.PartType.Cylinder,
@@ -1028,47 +1006,37 @@ B.discs = function(pc, o)
 	for index = 1, count do
 		z += 3 + radius
 		local home = pc:C(0, -1, z)
-		local _, spec = pc:Mover(
-			{
-				Name = "SpinDisc",
-				Shape = Enum.PartType.Cylinder,
-				Size = Vector3.new(2, radius * 2, radius * 2),
-				Color = pc.theme.mover,
-				Material = Enum.Material.SmoothPlastic,
-			},
-			{ Motion = "spin", Home = home, Offset = UPRIGHT, Speed = speed * (index % 2 == 0 and -1 or 1) }
-		)
+		local _, spec = pc:Mover({
+			Name = "SpinDisc",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(2, radius * 2, radius * 2),
+			Color = pc.theme.mover,
+			Material = Enum.Material.SmoothPlastic,
+		}, { Motion = "spin", Home = home, Offset = UPRIGHT, Speed = speed * (index % 2 == 0 and -1 or 1) })
 		-- Stripes on the disc so the spin is easy to see
 		for stripe = 0, 1 do
-			pc:Mover(
-				{
-					Name = "DiscStripe",
-					Size = Vector3.new(radius * 2 - 2, 0.2, 1),
-					Color = pc.theme.accent,
-					Material = Enum.Material.Neon,
-					CanCollide = false,
-				},
-				{
-					Motion = "spin",
-					Home = home,
-					Offset = CFrame.new(0, 1.05, 0) * CFrame.Angles(0, stripe * math.pi / 2, 0),
-					Speed = speed * (index % 2 == 0 and -1 or 1),
-				}
-			)
+			pc:Mover({
+				Name = "DiscStripe",
+				Size = Vector3.new(radius * 2 - 2, 0.2, 1),
+				Color = pc.theme.accent,
+				Material = Enum.Material.Neon,
+				CanCollide = false,
+			}, {
+				Motion = "spin",
+				Home = home,
+				Offset = CFrame.new(0, 1.05, 0) * CFrame.Angles(0, stripe * math.pi / 2, 0),
+				Speed = speed * (index % 2 == 0 and -1 or 1),
+			})
 		end
 		if o.bar then
-			pc:Mover(
-				{
-					Name = "DiscBar",
-					Size = Vector3.new(radius * 2 - 3, 1.2, 1.2),
-					Color = pc.theme.hazard,
-					Material = Enum.Material.SmoothPlastic,
-					CanCollide = false,
-					Attributes = { Low = true },
-				},
-				{ Motion = "spin", Home = home * CFrame.new(0, 2.4, 0), Speed = -speed * 2.2 },
-				{ "Hit" }
-			)
+			pc:Mover({
+				Name = "DiscBar",
+				Size = Vector3.new(radius * 2 - 3, 1.2, 1.2),
+				Color = pc.theme.hazard,
+				Material = Enum.Material.SmoothPlastic,
+				CanCollide = false,
+				Attributes = { Low = true },
+			}, { Motion = "spin", Home = home * CFrame.new(0, 2.4, 0), Speed = -speed * 2.2 }, { "Hit" })
 		end
 		pc:Node({
 			kind = "ride",
@@ -1103,25 +1071,21 @@ B.climb = function(pc, o)
 		z += depth + 1
 	end
 	local height = tiers * step
-	local _, spec = pc:Mover(
-		{
-			Name = "Lava",
-			Size = Vector3.new(w + 6, 2, z + 6),
-			Color = Color3.fromRGB(255, 100, 20),
-			Material = Enum.Material.Neon,
-			CanCollide = false,
-			Transparency = 0.1,
-		},
-		{
-			Motion = "lava",
-			Home = pc:C(0, -2, z / 2),
-			Low = -1,
-			High = height * 0.6,
-			Period = period,
-			Rise = period * 0.25,
-		},
-		{ "Kill" }
-	)
+	local _, spec = pc:Mover({
+		Name = "Lava",
+		Size = Vector3.new(w + 6, 2, z + 6),
+		Color = Color3.fromRGB(255, 100, 20),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.1,
+	}, {
+		Motion = "lava",
+		Home = pc:C(0, -2, z / 2),
+		Low = -1,
+		High = height * 0.6,
+		Period = period,
+		Rise = period * 0.25,
+	}, { "Kill" })
 	pc:Node({ kind = "lava", spec = spec })
 	pc:Go(0, height, z)
 	if o.gem then
@@ -1215,24 +1179,20 @@ B.pushers = function(pc, o)
 			CFrame = pc:C(side * (w / 2 + 6), 2.5, z),
 			Color = pc.theme.edge,
 		})
-		pc:Mover(
-			{
-				Name = "Pusher",
-				Size = Vector3.new(6, 4.5, 6),
-				Color = pc.theme.hazard,
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-			},
-			{
-				Motion = "piston",
-				Home = home,
-				Axis = Vector3.new(-side, 0, 0),
-				Dist = w - 3,
-				Period = period,
-				Phase = index * period / count,
-			},
-			{ "Hit" }
-		)
+		pc:Mover({
+			Name = "Pusher",
+			Size = Vector3.new(6, 4.5, 6),
+			Color = pc.theme.hazard,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+		}, {
+			Motion = "piston",
+			Home = home,
+			Axis = Vector3.new(-side, 0, 0),
+			Dist = w - 3,
+			Period = period,
+			Phase = index * period / count,
+		}, { "Hit" })
 		pc:Go(0, 0, z, { hazard = true })
 	end
 	pc:Go(0, 0, l)

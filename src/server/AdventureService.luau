@@ -18,6 +18,7 @@ local CourseService = require(script.Parent.CourseService)
 local ProgressService = require(script.Parent.ProgressService)
 local TutorialService = require(script.Parent.TutorialService)
 local CosmeticService = require(script.Parent.CosmeticService)
+local TrialService = require(script.Parent.TrialService)
 
 local AdventureService = {}
 
@@ -99,6 +100,7 @@ function AdventureService.Play(player, courseId)
 		savedGems = savedGems(data, courseId),
 		onFinish = onFinish,
 		onGem = onGem,
+		record = true, -- the path, for ghosts
 	})
 	TutorialService.Event(player, "Course")
 	return true
@@ -123,16 +125,13 @@ onGem = function(run, index)
 	end)
 	if isNew then
 		run.savedGems[index] = true
-		ProgressService.AddResult(
-			player,
-			{
-				coins = Config.CourseRewards.gem,
-				xp = Config.CourseXp.gem,
-				stats = {},
-				quest = { gems = 1 },
-				quiet = true,
-			}
-		)
+		ProgressService.AddResult(player, {
+			coins = Config.CourseRewards.gem,
+			xp = Config.CourseXp.gem,
+			stats = {},
+			quest = { gems = 1 },
+			quiet = true,
+		})
 		-- All three found on a course already finished: the gem star right away
 		local starNow = false
 		DataService.Update(player, function(data)
@@ -144,16 +143,13 @@ onGem = function(run, index)
 			end
 		end)
 		if starNow then
-			ProgressService.AddResult(
-				player,
-				{
-					coins = Config.CourseRewards.star,
-					xp = Config.CourseXp.star,
-					stats = {},
-					quest = { stars = 1 },
-					quiet = true,
-				}
-			)
+			ProgressService.AddResult(player, {
+				coins = Config.CourseRewards.star,
+				xp = Config.CourseXp.star,
+				stats = {},
+				quest = { stars = 1 },
+				quiet = true,
+			})
 			notify(player, "All 3 gems: +1 star!", "rare")
 		end
 		notify(
@@ -185,6 +181,7 @@ onFinish = function(run)
 	local time = run.time
 	local valid = not run.skipped and time >= course.par * Config.MinTimeShare
 	local result = {
+		mode = "adventure",
 		courseId = courseId,
 		name = course.data.name,
 		time = time,
@@ -245,9 +242,10 @@ onFinish = function(run)
 		coins = coins,
 		xp = xp,
 		stats = { courses = 1, falls = run.falls },
-		quest = { courses = 1, stars = result.newStars, ["courses_" .. course.world] = 1 },
+		quest = { courses = 1, stars = result.newStars },
 		quiet = true,
 	})
+	TrialService.Finished(player, run, result.newBest, valid)
 	local nextCourse = Courses.Next(courseId, WORLD_ORDER)
 	result.nextCourse = nextCourse and nextCourse.id or nil
 	Remotes.Run:FireClient(player, "result", result)
@@ -284,7 +282,7 @@ end
 
 local function retry(player)
 	local run = CourseService.Get(player)
-	if not run or run.mode ~= "adventure" then
+	if not run or (run.mode ~= "adventure" and run.mode ~= "daily") then
 		return false, "You're not on a course"
 	end
 	CourseService.Restart(run)

@@ -31,16 +31,13 @@ function Hud.Init(screenGui)
 		BackgroundTransparency = 0.15,
 		Parent = screenGui,
 	}, { UI.corner(12), UI.padding(10), UI.list(4) })
-	local levelLine = UI.label(
-		"Lv 1 Runner",
-		{
-			Size = UDim2.new(1, 0, 0, 22),
-			TextColor3 = Color3.fromRGB(150, 220, 255),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			LayoutOrder = 1,
-			Parent = stats,
-		}
-	)
+	local levelLine = UI.label("Lv 1 Runner", {
+		Size = UDim2.new(1, 0, 0, 22),
+		TextColor3 = Color3.fromRGB(150, 220, 255),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 1,
+		Parent = stats,
+	})
 	local xpBack = UI.new(
 		"Frame",
 		{ Size = UDim2.new(1, 0, 0, 6), BackgroundColor3 = T.Card, LayoutOrder = 2, Parent = stats },
@@ -51,27 +48,21 @@ function Hud.Init(screenGui)
 		{ Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(150, 220, 255), Parent = xpBack },
 		{ UI.corner(3) }
 	)
-	local coins = UI.label(
-		"0 coins",
-		{
-			Size = UDim2.new(1, 0, 0, 24),
-			TextColor3 = T.Gold,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			LayoutOrder = 3,
-			Parent = stats,
-		}
-	)
-	local record = UI.label(
-		"",
-		{
-			Size = UDim2.new(1, 0, 0, 16),
-			Font = T.BodyFont,
-			TextColor3 = T.Muted,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			LayoutOrder = 4,
-			Parent = stats,
-		}
-	)
+	local coins = UI.label("0 coins", {
+		Size = UDim2.new(1, 0, 0, 24),
+		TextColor3 = T.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 3,
+		Parent = stats,
+	})
+	local record = UI.label("", {
+		Size = UDim2.new(1, 0, 0, 16),
+		Font = T.BodyFont,
+		TextColor3 = T.Muted,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 4,
+		Parent = stats,
+	})
 
 	local function update(data)
 		local progress, level = Level.Progress(data.xp or 0)

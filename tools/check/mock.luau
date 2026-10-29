@@ -42,12 +42,20 @@ end
 Mock.Signal = signal
 
 ------------------------------------------------------------------ Instances
-local PARTS = { Part = true, TrussPart = true, SpawnLocation = true, WedgePart = true, MeshPart = true, CornerWedgePart = true }
+local PARTS =
+	{ Part = true, TrussPart = true, SpawnLocation = true, WedgePart = true, MeshPart = true, CornerWedgePart = true }
 local SUPER = {
 	BasePart = PARTS,
 	GuiObject = { Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ScrollingFrame = true },
 	LuaSourceContainer = { Script = true, LocalScript = true, ModuleScript = true },
-	PVInstance = { Model = true, Part = true, TrussPart = true, SpawnLocation = true, WedgePart = true, MeshPart = true },
+	PVInstance = {
+		Model = true,
+		Part = true,
+		TrussPart = true,
+		SpawnLocation = true,
+		WedgePart = true,
+		MeshPart = true,
+	},
 }
 
 local tags = setmetatable({}, { __mode = "k" }) -- [instance] = { [tag] = true }
@@ -83,6 +91,26 @@ function Inst.new(className, parent)
 		props.AssemblyLinearVelocity = Vector3.zero
 		props.AssemblyAngularVelocity = Vector3.zero
 	end
+	if className == "RemoteEvent" then
+		props.OnServerEvent = signal()
+		props.OnClientEvent = signal()
+		props.FireClient = function() end
+		props.FireAllClients = function() end
+		props.FireServer = function() end
+	elseif className == "RemoteFunction" then
+		props.InvokeServer = function() end
+		props.InvokeClient = function() end
+	elseif className == "BindableEvent" then
+		local event = signal()
+		props.Event = event
+		props.Fire = function(_, ...)
+			event:Fire(...)
+		end
+	elseif className == "BindableFunction" then
+		props.Invoke = function(this, ...)
+			return rawget(this, "_props").OnInvoke(...)
+		end
+	end
 	if parent then
 		self.Parent = parent
 	end
@@ -105,6 +133,10 @@ mt.__index = function(self, key)
 		return rawget(self, "_parent")
 	elseif key == "Position" and props.CFrame then
 		return props.CFrame.Position
+	elseif key == "Destroying" or key == "AncestryChanged" or key == "Changed" then
+		local list = rawget(self, "_signals")
+		list[key] = list[key] or signal()
+		return list[key]
 	elseif key == "Orientation" and props.CFrame then
 		local x, y, z = props.CFrame:ToOrientation()
 		return Vector3.new(math.deg(x), math.deg(y), math.deg(z))
@@ -336,6 +368,7 @@ function methods:PivotTo(cframe)
 	end
 end
 
+function methods:BindToClose() end
 function methods:Play() end
 function methods:Stop() end
 function methods:Emit() end
@@ -453,19 +486,138 @@ service("RunService", {
 		return false
 	end,
 })
-service("Players", {
+local players = service("Players", {
 	PlayerAdded = signal(),
 	PlayerRemoving = signal(),
-	GetPlayers = function()
-		return {}
-	end,
 })
+rawget(players, "_props").GetPlayers = function()
+	local list = {}
+	for _, child in ipairs(rawget(players, "_children")) do
+		if rawget(child, "_class") == "Player" then
+			table.insert(list, child)
+		end
+	end
+	return list
+end
+rawget(players, "_props").GetPlayerByUserId = function(_, userId)
+	for _, player in ipairs(players:GetPlayers()) do
+		if player.UserId == userId then
+			return player
+		end
+	end
+	return nil
+end
+rawget(players, "_props").GetNameFromUserIdAsync = function(_, userId)
+	return "Player" .. userId
+end
+
+-- A pretend player with a character standing at a position
+function Mock.AddPlayer(userId, name)
+	local player = Inst.new("Player")
+	local props = rawget(player, "_props")
+	props.Name = name
+	props.DisplayName = name
+	props.UserId = userId
+	props.CharacterAdded = signal()
+	props.Kick = function(_, reason)
+		print("KICKED: " .. tostring(reason))
+	end
+	props.RequestStreamAroundAsync = function() end
+	props.LoadCharacter = function() end
+	local character = Inst.new("Model")
+	character.Name = name
+	local root = Inst.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Parent = character
+	local head = Inst.new("Part")
+	head.Name = "Head"
+	head.Parent = character
+	local humanoid = Inst.new("Humanoid")
+	rawget(humanoid, "_props").Health = 100
+	rawget(humanoid, "_props").WalkSpeed = 16
+	humanoid.Parent = character
+	character.PrimaryPart = root
+	character.Parent = SERVICES.Workspace
+	props.Character = character
+	player.Parent = players
+	players.PlayerAdded:Fire(player)
+	return player
+end
 service("TweenService", {
 	Create = function()
 		return { Play = function() end, Cancel = function() end, Completed = signal() }
 	end,
 })
 service("Debris", { AddItem = function() end })
+service("MarketplaceService", {
+	PromptGamePassPurchaseFinished = signal(),
+	PromptProductPurchaseFinished = signal(),
+	UserOwnsGamePassAsync = function()
+		return false
+	end,
+	GetProductInfo = function()
+		return { PriceInRobux = 0 }
+	end,
+})
+
+-- Saved data lives in memory for one run
+local stores = {}
+local function store(name, ordered)
+	local key = (ordered and "o:" or "d:") .. name
+	if stores[key] then
+		return stores[key]
+	end
+	local values = {}
+	local s = {}
+	function s:GetAsync(k)
+		return values[k]
+	end
+	function s:SetAsync(k, v)
+		values[k] = v
+	end
+	function s:UpdateAsync(k, fn)
+		local new = fn(values[k])
+		if new ~= nil then
+			values[k] = new
+		end
+		return values[k]
+	end
+	function s:RemoveAsync(k)
+		values[k] = nil
+	end
+	function s:GetSortedAsync(ascending, size)
+		local list = {}
+		for k, v in pairs(values) do
+			table.insert(list, { key = k, value = v })
+		end
+		table.sort(list, function(x, y)
+			if ascending then
+				return x.value < y.value
+			end
+			return x.value > y.value
+		end)
+		local page = {}
+		for i = 1, math.min(size, #list) do
+			page[i] = list[i]
+		end
+		return {
+			GetCurrentPage = function()
+				return page
+			end,
+		}
+	end
+	stores[key] = s
+	return s
+end
+service("DataStoreService", {
+	GetDataStore = function(_, name)
+		return store(name, false)
+	end,
+	GetOrderedDataStore = function(_, name)
+		return store(name, true)
+	end,
+})
 
 function methods:GetService(name)
 	return SERVICES[name] or service(name)
@@ -499,7 +651,10 @@ local function requireMock(module)
 	local path = rawget(module, "_props").SourcePath
 	assert(path, "not a script: " .. tostring(module))
 	local source = fs.readFile(path)
-	local chunk = luau.load(source, { debugName = path, environment = setmetatable({ script = module }, { __index = env }), injectGlobals = false })
+	local chunk = luau.load(
+		source,
+		{ debugName = path, environment = setmetatable({ script = module }, { __index = env }), injectGlobals = false }
+	)
 	local result = chunk()
 	loaded[module] = result
 	return result
@@ -558,7 +713,8 @@ local function mount(srcFolder, parent, name)
 	end
 	local holder
 	if initFile then
-		local className = initFile:match("server") and "Script" or (initFile:match("client") and "LocalScript" or "ModuleScript")
+		local className = initFile:match("server") and "Script"
+			or (initFile:match("client") and "LocalScript" or "ModuleScript")
 		holder = Inst.new(className)
 		rawget(holder, "_props").SourcePath = srcFolder .. "/" .. initFile
 	else
