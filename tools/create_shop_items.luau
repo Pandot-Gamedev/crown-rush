@@ -22,7 +22,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Cosmetics = require(game:GetService("ReplicatedStorage").Shared.Cosmetics)
 local Shop = require(game:GetService("ReplicatedStorage").Shared.Shop)
 
-local UNIVERSE = 0
+local UNIVERSE = 10773678497 -- Crown Rush (place 134072645580262)
 local MAKE_PASSES = true
 local ICONS =
 	"https://raw.githubusercontent.com/Pandot-Gamedev/crown-rush/refs/heads/claude/project-thread-5pvzuk/store/"
