@@ -8,7 +8,7 @@ import math
 import os
 import random
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "store")
@@ -311,69 +311,6 @@ def platform(d, x0, x1, top, color, depth=26):
     d.rectangle([x0, top - depth * 0.35, x1, top], fill=color, outline=shade(color, -70), width=3)
 
 
-def scene(size, title=True, tagline=None):
-    """A sky obstacle course: runners race up past a spinner to a giant crown."""
-    w, h = size
-    img = gradient(size, SKY_TOP, SKY_BOTTOM).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    for cx, cy, r in ((0.12, 0.7, 0.06), (0.88, 0.78, 0.07), (0.3, 0.93, 0.05), (0.66, 0.95, 0.06), (0.55, 0.25, 0.04)):
-        cloud(d, w * cx, h * cy, h * r)
-    pink, mint, lilac = WORLDS["candy"][1], (130, 230, 190), (180, 150, 255)
-    # A staircase of blocks rising left to right, the crown on the top one
-    steps = [(0.02, 0.24, 0.82, pink), (0.27, 0.42, 0.7, mint), (0.45, 0.6, 0.58, lilac), (0.63, 0.78, 0.47, pink), (0.8, 0.98, 0.36, (255, 220, 90))]
-    for x0, x1, top, color in steps:
-        platform(d, w * x0, w * x1, h * top, color, depth=h * 0.05)
-    # a spinner bar on the middle block
-    cx, top = w * 0.525, h * 0.58
-    d.rectangle([cx - 8, top - h * 0.12, cx + 8, top - h * 0.02], fill=(90, 90, 110))
-    d.rounded_rectangle([cx - w * 0.1, top - h * 0.14, cx + w * 0.1, top - h * 0.11], radius=8, fill=(255, 70, 90), outline=(120, 20, 40), width=4)
-    d.arc([cx - w * 0.12, top - h * 0.2, cx + w * 0.12, top - h * 0.05], 200, 250, fill=(255, 255, 255), width=8)
-    # the crown, glowing
-    gx, gy = w * 0.89, h * 0.36 - h * 0.13
-    for r, a in ((h * 0.2, 35), (h * 0.15, 55)):
-        glow = layer(r * 2)
-        ImageDraw.Draw(glow).ellipse([0, 0, r * 2, r * 2], fill=(255, 240, 150, a))
-        paste_center(img, glow, gx, gy)
-    paste_center(img, big_crown(h * 0.26), gx, gy)
-    # runners: one leaping for the crown, one on each step, one bounced off by the spinner
-    paste_center(img, brawler(h * 0.3, shirt=SHIRTS[0], pose="cheer").rotate(-15, resample=Image.BICUBIC, expand=True), w * 0.75, h * 0.29)
-    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[1], pose="run"), w * 0.68, h * 0.38)
-    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[2], pose="run"), w * 0.36, h * 0.6)
-    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[3], pose="run"), w * 0.13, h * 0.72)
-    paste_center(img, brawler(h * 0.22, shirt=SHIRTS[4], pose="fly", face="dizzy").rotate(30, resample=Image.BICUBIC, expand=True), w * 0.46, h * 0.31)
-    d = ImageDraw.Draw(img)
-    motion_lines(d, w * 0.63, h * 0.39, w * 0.07, 0, count=3, spacing=h * 0.025, width=max(4, int(h * 0.007)))
-    motion_lines(d, w * 0.31, h * 0.61, w * 0.06, 0, count=3, spacing=h * 0.025, width=max(4, int(h * 0.007)))
-    if title:
-        outlined_text(d, (w * 0.4, h * 0.13), "CROWN RUSH", font(FONT_BOLD, int(h * 0.14)), (255, 215, 60), outline=(110, 30, 90), width=max(4, int(h * 0.012)))
-    if tagline:
-        d.rounded_rectangle([w * 0.08, h * 0.86, w * 0.92, h * 0.95], radius=int(h * 0.03), fill=(20, 20, 40, 200))
-        outlined_text(d, (w * 0.5, h * 0.905), tagline, font(FONT_SEMI, int(h * 0.04)), (255, 255, 255), width=max(2, int(h * 0.004)))
-    return img
-
-
-def icon_art(s):
-    """The square game icon: a runner leaping for a giant crown."""
-    img = gradient((s, s), (255, 140, 200), (255, 210, 120)).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    for i in range(18):
-        a0 = math.pi * 2 / 18 * i
-        a1 = a0 + math.pi / 18
-        cx, cy, r = s * 0.62, s * 0.5, s * 1.2
-        d.polygon([(cx, cy), (cx + math.cos(a0) * r, cy + math.sin(a0) * r), (cx + math.cos(a1) * r, cy + math.sin(a1) * r)], fill=(255, 175, 200))
-    cloud(d, s * 0.14, s * 0.92, s * 0.09)
-    cloud(d, s * 0.9, s * 0.9, s * 0.08)
-    platform(d, s * 0.5, s * 1.02, s * 0.74, (255, 220, 90), depth=s * 0.08)
-    platform(d, -s * 0.02, s * 0.36, s * 0.9, (150, 110, 255), depth=s * 0.08)
-    paste_center(img, big_crown(s * 0.46), s * 0.72, s * 0.52)
-    paste_center(img, brawler(s * 0.5, shirt=(60, 140, 255), pose="cheer").rotate(-25, resample=Image.BICUBIC, expand=True), s * 0.33, s * 0.6)
-    d = ImageDraw.Draw(img)
-    motion_lines(d, s * 0.16, s * 0.72, s * 0.14, 215, count=3, spacing=s * 0.035, width=12)
-    outlined_text(d, (s * 0.5, s * 0.11), "CROWN", font(FONT_BOLD, int(s * 0.19)), (255, 225, 70), outline=(110, 30, 90), width=14)
-    outlined_text(d, (s * 0.5, s * 0.26), "RUSH", font(FONT_BOLD, int(s * 0.16)), (255, 255, 255), outline=(110, 30, 90), width=12)
-    return img
-
-
 def trail_icon(colors):
     """A runner zooming past with a coloured trail."""
     def draw(img, d, s):
@@ -392,128 +329,451 @@ def trail_icon(colors):
     return draw
 
 
-def card_scene(kind, size):
-    """A small picture for each kind of tournament round."""
+FONT_POSTER = os.path.join(ROOT, "tools", "fonts", "LuckiestGuy-Regular.ttf")
+SKIN = (255, 205, 150)
+INK = (35, 20, 30)
+LAVA_TOP, LAVA_BOTTOM = (255, 170, 40), (220, 40, 20)
+
+
+def sticker(img, width, color=(255, 255, 255)):
+    """Puts a solid rim around everything drawn on img, like a cut-out sticker."""
+    pad = int(width * 2) + 4
+    big = Image.new("RGBA", (img.width + pad * 2, img.height + pad * 2), (0, 0, 0, 0))
+    big.alpha_composite(img, (pad, pad))
+    alpha = big.getchannel("A").point(lambda a: 255 if a > 60 else 0)
+    grown = alpha.filter(ImageFilter.GaussianBlur(width * 0.6)).point(lambda a: 255 if a > 6 else 0)
+    grown = grown.filter(ImageFilter.GaussianBlur(1.5))
+    rim = Image.new("RGBA", big.size, color + (255,))
+    rim.putalpha(grown)
+    rim.alpha_composite(big)
+    return rim
+
+
+def glow(img, cx, cy, r, color, strength=220):
+    """A soft round light centred on (cx, cy)."""
+    size = int(r * 3)
+    g = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(g).ellipse([size / 2 - r, size / 2 - r, size / 2 + r, size / 2 + r], fill=color + (strength,))
+    g = g.filter(ImageFilter.GaussianBlur(r * 0.35))
+    paste_center(img, g, cx, cy)
+
+
+def sunburst(size, cx, cy, base, ray, count=20, edge=None):
+    """Rays spreading from (cx, cy), darker towards the corners."""
     w, h = size
-    sky = gradient(size, SKY_TOP, SKY_BOTTOM).convert("RGBA")
-    d = ImageDraw.Draw(sky)
-    if kind == "RACE":
-        platform(d, 10, w - 10, h * 0.72, (255, 170, 210), depth=40)
-        d.rectangle([w * 0.82, h * 0.3, w * 0.86, h * 0.72], fill=(60, 60, 70))
-        for k in range(4):
-            d.rectangle([w * 0.86, h * (0.3 + k * 0.05), w * 0.96, h * (0.35 + k * 0.05)], fill=(255, 255, 255) if k % 2 == 0 else (30, 30, 30))
-        for i, x in enumerate((0.22, 0.45, 0.66)):
-            paste_center(sky, brawler(h * 0.42, shirt=SHIRTS[i], pose="run"), w * x, h * 0.53)
-    elif kind == "SURVIVAL":
-        d.rectangle([0, h * 0.78, w, h], fill=(255, 110, 30))
-        for k in range(5):
-            d.polygon([(k * w / 4.0 - 30, h * 0.78), (k * w / 4.0, h * 0.7), (k * w / 4.0 + 30, h * 0.78)], fill=(255, 170, 60))
-        for k, (x, top) in enumerate(((0.2, 0.62), (0.5, 0.48), (0.8, 0.34))):
-            platform(d, w * (x - 0.12), w * (x + 0.12), h * top, (175, 220, 250), depth=24)
-        paste_center(sky, brawler(h * 0.34, shirt=SHIRTS[3], pose="cheer"), w * 0.8, h * 0.2)
-        paste_center(sky, brawler(h * 0.3, shirt=SHIRTS[1], pose="run"), w * 0.5, h * 0.36)
-    elif kind == "FIGHT":
-        island(d, w / 2, h * 0.7, w * 0.42, (255, 220, 90), depth=h * 0.25)
-        paste_center(sky, brawler(h * 0.42, shirt=SHIRTS[0], pose="swing"), w * 0.36, h * 0.5)
-        paste_center(sky, hammer(h * 0.36, angle=-75), w * 0.46, h * 0.38)
-        paste_center(sky, brawler(h * 0.34, shirt=SHIRTS[1], pose="fly", face="dizzy").rotate(-35, resample=Image.BICUBIC, expand=True), w * 0.78, h * 0.3)
-    else:  # TEAM
-        island(d, w / 2, h * 0.74, w * 0.45, (130, 230, 190), depth=h * 0.22)
-        d.ellipse([w * 0.38, h * 0.38, w * 0.62, h * 0.72], fill=(255, 220, 90), outline=(150, 100, 0), width=6)
-        paste_center(sky, brawler(h * 0.36, shirt=(235, 70, 70), pose="run"), w * 0.24, h * 0.56)
-        paste_center(sky, brawler(h * 0.36, shirt=(60, 140, 255), pose="run").transpose(Image.FLIP_LEFT_RIGHT), w * 0.78, h * 0.56)
-    return sky
+    img = Image.new("RGBA", size, base + (255,))
+    d = ImageDraw.Draw(img)
+    big = max(w, h) * 2
+    for i in range(count):
+        a0 = math.pi * 2 / count * i
+        a1 = a0 + math.pi / count
+        d.polygon([(cx, cy), (cx + math.cos(a0) * big, cy + math.sin(a0) * big), (cx + math.cos(a1) * big, cy + math.sin(a1) * big)], fill=ray)
+    if edge:
+        # vignette: fade to the edge colour away from the centre
+        v = Image.new("L", size, 0)
+        vd = ImageDraw.Draw(v)
+        r = max(w, h) * 0.75
+        vd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
+        v = v.filter(ImageFilter.GaussianBlur(max(w, h) * 0.18))
+        dark = Image.new("RGBA", size, edge + (255,))
+        dark.paste(img, (0, 0), v)
+        img = dark
+    return img
 
 
-def cards_thumbnail(title, subtitle, cards, bg_top, bg_bottom):
-    t = gradient((1920, 1080), bg_top, bg_bottom).convert("RGBA")
-    d = ImageDraw.Draw(t)
-    outlined_text(d, (960, 110), title, font(FONT_BOLD, 112), (255, 215, 60), outline=(110, 30, 90), width=10)
-    d.text((960, 210), subtitle, font=font(FONT_SEMI, 46), fill=(235, 235, 255), anchor="mm")
-    width = 1820 // len(cards)
-    left = (1920 - (len(cards) * width - 40)) // 2
-    for i, (head, sub, color, picture) in enumerate(cards):
-        x0 = left + i * width
-        d.rounded_rectangle([x0, 290, x0 + width - 40, 990], radius=36, fill=(25, 28, 55), outline=color, width=10)
-        pic = picture((width - 80, 380))
-        mask = Image.new("L", pic.size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, pic.width, pic.height], radius=24, fill=255)
-        t.paste(pic, (x0 + 20, 310), mask)
-        d = ImageDraw.Draw(t)
-        cx = x0 + (width - 40) / 2
-        outlined_text(d, (cx, 790), head, font(FONT_BOLD, 50 if len(cards) <= 4 else 36), color, width=4)
-        d.text((cx, 870), sub, font=font(FONT_SEMI, 28 if len(cards) <= 4 else 24), fill=(220, 225, 255), anchor="mm")
-    return t
+def headline(text, size, top, bottom, stroke=INK, depth=None, angle=0, rim=(255, 255, 255)):
+    """Big poster lettering: gradient fill, dark outline, a 3D drop and a white rim."""
+    fnt = font(FONT_POSTER, size)
+    sw = max(4, int(size * 0.08))
+    depth = int(size * 0.09) if depth is None else depth
+    box = fnt.getbbox(text, stroke_width=sw)
+    w, h = box[2] - box[0] + sw * 4, box[3] - box[1] + sw * 4 + depth
+    lay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    x, y = sw * 2 - box[0], sw * 2 - box[1]
+    for k in range(depth, 0, -2):
+        d.text((x, y + k), text, font=fnt, fill=shade(stroke, 0), stroke_width=sw, stroke_fill=stroke)
+    d.text((x, y), text, font=fnt, fill=stroke, stroke_width=sw, stroke_fill=stroke)
+    mask = Image.new("L", lay.size, 0)
+    ImageDraw.Draw(mask).text((x, y), text, font=fnt, fill=255)
+    fill = gradient((w, h), top, bottom).convert("RGBA")
+    lay.paste(fill, (0, 0), mask)
+    # a shine across the top half of the letters
+    shine = Image.new("L", lay.size, 0)
+    ImageDraw.Draw(shine).rectangle([0, 0, w, y + (box[3] - box[1]) * 0.42], fill=70)
+    shine = ImageChops.multiply(shine, mask)
+    lay.paste(Image.new("RGBA", lay.size, (255, 255, 255, 255)), (0, 0), shine)
+    if rim:
+        lay = sticker(lay, max(3, size * 0.035), rim)
+    if angle:
+        lay = lay.rotate(angle, resample=Image.BICUBIC, expand=True)
+    return lay
 
 
-def world_scene(key):
-    name, floor, accent = WORLDS[key]
-    def picture(size):
-        w, h = size
-        tops = {"candy": ((150, 200, 255), (255, 215, 235)), "jungle": ((140, 200, 170), (170, 210, 160)), "frost": ((190, 220, 245), (225, 240, 255)), "lava": ((90, 50, 40), (200, 90, 40)), "space": ((20, 15, 45), (60, 40, 110))}
-        img = gradient(size, *tops[key]).convert("RGBA")
+def face(size, shirt=(60, 140, 255), mood="shock", look=(0, -0.3), hands=True):
+    """A big close-up of a blocky avatar. mood: shock (mouth open, hands on cheeks) or smug."""
+    s = size
+    img = layer(s)
+    d = ImageDraw.Draw(img)
+    w = max(3, int(s * 0.014))
+    # shoulders and neck
+    d.rounded_rectangle([s * 0.04, s * 0.7, s * 0.96, s * 1.2], radius=int(s * 0.08), fill=shirt, outline=INK, width=w)
+    d.rectangle([s * 0.36, s * 0.66, s * 0.64, s * 0.74], fill=shade(SKIN, -30), outline=INK, width=w)
+    d.polygon([(s * 0.38, s * 0.72), (s * 0.5, s * 0.82), (s * 0.62, s * 0.72)], fill=shade(shirt, -45))
+    # head with a little shading on the right
+    d.rounded_rectangle([s * 0.16, s * 0.06, s * 0.84, s * 0.68], radius=int(s * 0.12), fill=SKIN, outline=INK, width=w)
+    d.rounded_rectangle([s * 0.7, s * 0.12, s * 0.8, s * 0.62], radius=int(s * 0.05), fill=shade(SKIN, -18))
+    d.ellipse([s * 0.24, s * 0.1, s * 0.42, s * 0.2], fill=shade(SKIN, 30))
+    ey = s * 0.31
+    lx, ly = look
+    for ex in (0.37, 0.63):
+        x = s * ex
+        if mood == "shock":
+            rx, ry = s * 0.085, s * 0.105
+            d.ellipse([x - rx, ey - ry, x + rx, ey + ry], fill=(255, 255, 255), outline=INK, width=w)
+            pr = s * 0.035
+            px, py = x + lx * rx * 0.45, ey + ly * ry * 0.45
+            d.ellipse([px - pr, py - pr, px + pr, py + pr], fill=INK)
+            d.ellipse([px - pr * 0.2, py - pr * 0.75, px + pr * 0.35, py - pr * 0.2], fill=(255, 255, 255))
+            # eyebrows shot up
+            side = -1 if ex < 0.5 else 1
+            bx = x + side * s * 0.01
+            d.line([(bx - s * 0.075, s * 0.17 + (s * 0.012 if side < 0 else -s * 0.012) * 0), (bx, s * 0.14), (bx + s * 0.075, s * 0.17)], fill=INK, width=int(s * 0.032), joint="curve")
+        else:
+            rx, ry = s * 0.08, s * 0.07
+            d.ellipse([x - rx, ey - ry, x + rx, ey + ry], fill=(255, 255, 255), outline=INK, width=w)
+            pr = s * 0.032
+            px, py = x + lx * rx * 0.4, ey + ry * 0.2
+            d.ellipse([px - pr, py - pr, px + pr, py + pr], fill=INK)
+            # heavy lids and eyebrows angled down to the middle: up to something
+            d.chord([x - rx - w, ey - ry - w, x + rx + w, ey + ry * 0.6], 180, 360, fill=SKIN, outline=INK, width=w)
+            inner = 1 if ex < 0.5 else -1
+            d.line([(x - inner * s * 0.08, s * 0.17), (x + inner * s * 0.06, s * 0.21)], fill=INK, width=int(s * 0.034))
+    if mood == "shock":
+        # a big open mouth with teeth and tongue
+        mx, my, rx, ry = s * 0.5, s * 0.53, s * 0.09, s * 0.1
+        d.ellipse([mx - rx, my - ry, mx + rx, my + ry], fill=(90, 20, 35), outline=INK, width=w)
+        d.chord([mx - rx * 0.75, my + ry * 0.1, mx + rx * 0.75, my + ry * 0.95], 0, 180, fill=(240, 90, 110))
+        d.chord([mx - rx * 0.8, my - ry * 0.98, mx + rx * 0.8, my - ry * 0.2], 180, 360, fill=(255, 255, 255))
+        # sweat drops
+        for sx, sy, r in ((0.86, 0.16, 0.035), (0.92, 0.3, 0.025), (0.12, 0.2, 0.028)):
+            x, y, rr = s * sx, s * sy, s * r
+            d.polygon([(x, y - rr * 2.2), (x - rr, y), (x + rr, y)], fill=(120, 210, 255))
+            d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=(120, 210, 255), outline=(40, 120, 200), width=max(2, w // 2))
+        if hands:
+            for hx in (0.1, 0.9):
+                x = s * hx
+                d.rounded_rectangle([x - s * 0.075, s * 0.38, x + s * 0.075, s * 0.68], radius=int(s * 0.04), fill=SKIN, outline=INK, width=w)
+                for k in range(3):
+                    fy = s * (0.44 + k * 0.06)
+                    d.line([(x - s * 0.06, fy), (x + s * 0.06, fy)], fill=shade(SKIN, -45), width=max(2, w // 2))
+    else:
+        # a sly grin
+        d.chord([s * 0.33, s * 0.4, s * 0.7, s * 0.6], 0, 180, fill=(90, 20, 35), outline=INK, width=w)
+        d.rectangle([s * 0.36, s * 0.5, s * 0.67, s * 0.535], fill=(255, 255, 255))
+        d.line([(s * 0.3, s * 0.48), (s * 0.34, s * 0.5)], fill=INK, width=w)
+    return img
+
+
+def curved_arrow(img, p0, p1, p2, width, color=(240, 30, 40)):
+    """A fat red arrow along a curve from p0 to p2 (p1 bends it), with a white rim."""
+    pad = width * 3
+    xs, ys = [p[0] for p in (p0, p1, p2)], [p[1] for p in (p0, p1, p2)]
+    ox, oy = min(xs) - pad, min(ys) - pad
+    lay = Image.new("RGBA", (int(max(xs) - ox + pad), int(max(ys) - oy + pad)), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+
+    def at(t):
+        x = (1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0]
+        y = (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]
+        return x - ox, y - oy
+
+    head = width * 1.4
+    pts = [at(i / 40) for i in range(41)]
+    # stop the shaft where the head starts
+    end = len(pts) - 1
+    while end > 1 and math.dist(pts[end], pts[-1]) < head * 0.9:
+        end -= 1
+    left, right = [], []
+    for i in range(end + 1):
+        a, b = pts[max(0, i - 1)], pts[min(end, i + 1)]
+        ang = math.atan2(b[1] - a[1], b[0] - a[0])
+        half = width * (0.3 + 0.2 * i / end)
+        nx, ny = -math.sin(ang) * half, math.cos(ang) * half
+        left.append((pts[i][0] + nx, pts[i][1] + ny))
+        right.append((pts[i][0] - nx, pts[i][1] - ny))
+    d.polygon(left + right[::-1], fill=color)
+    tip, base = pts[-1], pts[end]
+    ang = math.atan2(tip[1] - base[1], tip[0] - base[0])
+    nx, ny = -math.sin(ang) * width, math.cos(ang) * width
+    d.polygon([(base[0] + nx, base[1] + ny), tip, (base[0] - nx, base[1] - ny)], fill=color)
+    lay = sticker(lay, width * 0.16)
+    off = (lay.width - (int(max(xs) - ox + pad))) / 2
+    img.alpha_composite(lay, (int(ox - off), int(oy - off)))
+
+
+def ring(d, box, width, color=(240, 30, 40)):
+    """A hand-drawn style warning circle."""
+    x0, y0, x1, y1 = box
+    d.ellipse([x0 - width * 0.3, y0 - width * 0.3, x1 + width * 0.3, y1 + width * 0.3], outline=(255, 255, 255), width=int(width * 1.6))
+    d.ellipse(box, outline=color, width=int(width))
+
+
+def lava(img, top, glow_up=True):
+    """Bubbling lava across the bottom of img from y = top."""
+    w, h = img.size
+    sea = gradient((w, int(h - top) + 1), LAVA_TOP, LAVA_BOTTOM).convert("RGBA")
+    mask = Image.new("L", sea.size, 0)
+    md = ImageDraw.Draw(mask)
+    wave = [(0, sea.height)]
+    for i in range(0, 41):
+        x = w * i / 40
+        wave.append((x, h * 0.012 * (1 + math.sin(i * 1.3))))
+    wave.append((w, sea.height))
+    md.polygon(wave, fill=255)
+    if glow_up:
+        g = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(g).rectangle([0, top - h * 0.04, w, h], fill=(255, 120, 30, 170))
+        img.alpha_composite(g.filter(ImageFilter.GaussianBlur(h * 0.05)))
+    img.paste(sea, (0, int(top)), mask)
+    d = ImageDraw.Draw(img)
+    for _ in range(int(w / 90)):
+        x = random.uniform(0, w)
+        y = random.uniform(top + h * 0.03, h)
+        r = random.uniform(h * 0.006, h * 0.02)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 230, 120), outline=(255, 120, 40), width=max(2, int(r * 0.25)))
+
+
+def pop(fig, rim=None):
+    """A figure with a white sticker rim so it stands out."""
+    return sticker(fig, rim or max(4, fig.width * 0.025))
+
+
+def runner(size, shirt, pose="run", mood="happy", angle=0, flip=False):
+    fig = brawler(size, shirt=shirt, pose=pose, face=mood)
+    if flip:
+        fig = fig.transpose(Image.FLIP_LEFT_RIGHT)
+    if angle:
+        fig = fig.rotate(angle, resample=Image.BICUBIC, expand=True)
+    return pop(fig)
+
+
+def sparkles(d, cx, cy, r, count, color=(255, 255, 230), size=0.06):
+    for i in range(count):
+        a = random.uniform(0, math.pi * 2)
+        rr = random.uniform(r * 0.6, r * 1.15)
+        star(d, cx + math.cos(a) * rr, cy + math.sin(a) * rr, r * size * random.uniform(0.7, 1.4), color, points=4, inner=0.3)
+
+
+def glowing_crown(img, cx, cy, size, tilt=0, halo=True):
+    if halo:
+        glow(img, cx, cy, size * 0.75, (255, 240, 140), 255)
+    crown = big_crown(size)
+    if tilt:
+        crown = crown.rotate(tilt, resample=Image.BICUBIC, expand=True)
+    paste_center(img, sticker(crown, size * 0.02, (255, 250, 210)), cx, cy)
+    sparkles(ImageDraw.Draw(img), cx, cy, size * 0.62, 9, size=0.1)
+
+
+def pill(img, cx, cy, text, size, fill=(235, 30, 45), color=(255, 255, 255), angle=0):
+    """A bold label on a rounded tag."""
+    fnt = font(FONT_POSTER, size)
+    box = fnt.getbbox(text)
+    tw, th = box[2] - box[0], box[3] - box[1]
+    pw, ph = tw + size * 1.0, th + size * 0.7
+    lay = Image.new("RGBA", (int(pw), int(ph)), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    d.rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(ph * 0.3), fill=fill, outline=INK, width=max(3, int(size * 0.07)))
+    d.text((pw / 2 - box[0] - tw / 2, ph / 2 - box[1] - th / 2), text, font=fnt, fill=color, stroke_width=max(2, int(size * 0.05)), stroke_fill=INK)
+    lay = sticker(lay, size * 0.08)
+    if angle:
+        lay = lay.rotate(angle, resample=Image.BICUBIC, expand=True)
+    paste_center(img, lay, cx, cy)
+
+
+def tiles(img, x0, x1, y0, y1, rows, cols, colors, holes=(), falling=(), cracked=()):
+    """A floor of blocks seen from the front and a bit above. Returns the tile centres."""
+    d = ImageDraw.Draw(img)
+    centres = {}
+    for r in range(rows):
+        t0, t1 = r / rows, (r + 1) / rows
+        # rows further back are narrower (perspective)
+        def edge(t):
+            k = 0.78 + 0.22 * t
+            mid = (x0 + x1) / 2
+            return mid - (x1 - x0) / 2 * k, mid + (x1 - x0) / 2 * k
+
+        ya, yb = y0 + (y1 - y0) * t0, y0 + (y1 - y0) * t1
+        la, ra = edge(t0)
+        lb, rb = edge(t1)
+        thick = (yb - ya) * 0.35
+        for c in range(cols):
+            if (r, c) in holes:
+                continue
+            ca, cb = c / cols, (c + 1) / cols
+            gap = (rb - lb) / cols * 0.04
+            top = [(la + (ra - la) * ca + gap, ya), (la + (ra - la) * cb - gap, ya), (lb + (rb - lb) * cb - gap, yb - gap), (lb + (rb - lb) * ca + gap, yb - gap)]
+            color = colors[(r + c) % len(colors)]
+            drop = 0
+            if (r, c) in falling:
+                drop = (yb - ya) * 1.2
+                top = [(x + (yb - ya) * 0.15 * (1 if i in (1, 2) else -1) * 0.5, y + drop + (i % 2) * (yb - ya) * 0.25) for i, (x, y) in enumerate(top)]
+            front = [top[3], top[2], (top[2][0], top[2][1] + thick), (top[3][0], top[3][1] + thick)]
+            d.polygon(front, fill=shade(color, -70), outline=INK, width=max(2, int(thick * 0.08)))
+            d.polygon(top, fill=color, outline=INK, width=max(2, int(thick * 0.08)))
+            cx = sum(p[0] for p in top) / 4
+            cy = sum(p[1] for p in top) / 4
+            centres[(r, c)] = (cx, cy, top[2][0] - top[3][0], yb - ya)
+            if (r, c) in cracked:
+                tw = top[2][0] - top[3][0]
+                zz = [(cx - tw * 0.35, cy - (yb - ya) * 0.1), (cx - tw * 0.1, cy + (yb - ya) * 0.15), (cx + tw * 0.05, cy - (yb - ya) * 0.15), (cx + tw * 0.3, cy + (yb - ya) * 0.12)]
+                d.line(zz, fill=INK, width=max(3, int(thick * 0.18)), joint="curve")
+    return centres
+
+
+def thumb_crown(size):
+    """WIN THE CROWN: the crown on a high block, rivals bonked and falling into lava."""
+    w, h = size
+    img = sunburst(size, w * 0.66, h * 0.42, (255, 150, 40), (255, 190, 70), count=22, edge=(150, 30, 60))
+    lava(img, h * 0.86)
+    glow(img, w * 0.665, h * 0.43, h * 0.38 * 0.75, (255, 240, 140), 255)
+    d = ImageDraw.Draw(img)
+    # the winner's block and two lower blocks
+    platform(d, w * 0.53, w * 0.8, h * 0.66, (255, 215, 80), depth=h * 0.08)
+    platform(d, w * 0.83, w * 1.02, h * 0.79, (255, 120, 190), depth=h * 0.07)
+    platform(d, w * 0.33, w * 0.48, h * 0.79, (120, 220, 255), depth=h * 0.07)
+    glowing_crown(img, w * 0.665, h * 0.43, h * 0.38, tilt=6, halo=False)
+    # a runner leaping for it, a rival bonked away, two dropping into the lava
+    paste_center(img, runner(h * 0.34, SHIRTS[2], "cheer", angle=-22), w * 0.5, h * 0.52)
+    paste_center(img, runner(h * 0.26, SHIRTS[4], "fly", "dizzy", angle=35), w * 0.92, h * 0.36)
+    paste_center(img, pop(hammer(h * 0.3, angle=-60)), w * 0.79, h * 0.6)
+    paste_center(img, burst(h * 0.22, text="BONK!"), w * 0.88, h * 0.47)
+    paste_center(img, runner(h * 0.2, SHIRTS[3], "fly", "dizzy", angle=160), w * 0.42, h * 0.9)
+    paste_center(img, runner(h * 0.18, SHIRTS[5], "fly", "dizzy", angle=-150), w * 0.74, h * 0.93)
+    d = ImageDraw.Draw(img)
+    motion_lines(d, w * 0.4, h * 0.7, w * 0.07, 215, color=(255, 255, 255), count=3, spacing=h * 0.03, width=int(h * 0.01))
+    # the big shocked face in the corner
+    paste_center(img, sticker(face(h * 0.62, shirt=SHIRTS[1], look=(0.9, -0.5)), h * 0.015), w * 0.17, h * 0.72)
+    curved_arrow(img, (w * 0.36, h * 0.3), (w * 0.5, h * 0.14), (w * 0.57, h * 0.33), h * 0.05)
+    paste_center(img, headline("WIN THE CROWN!", int(h * 0.16), (255, 245, 120), (255, 170, 20), angle=3), w * 0.5, h * 0.12)
+    pill(img, w * 0.87, h * 0.9, "12 PLAYERS, 1 WINNER", int(h * 0.045), angle=-4)
+    return img
+
+
+def thumb_survive(size):
+    """DON'T FALL: the floor drops away into lava under the players."""
+    w, h = size
+    img = gradient(size, (70, 20, 90), (200, 60, 50)).convert("RGBA")
+    glow(img, w * 0.5, h * 0.95, h * 0.8, (255, 120, 40), 200)
+    lava(img, h * 0.78)
+    d = ImageDraw.Draw(img)
+    for _ in range(40):
+        x, y = random.uniform(0, w), random.uniform(0, h * 0.5)
+        r = random.uniform(2, h * 0.004)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 210, 160))
+    holes = {(0, 1), (1, 4), (2, 2), (3, 0), (3, 5), (1, 0)}
+    falling = {(2, 4), (3, 2)}
+    centres = tiles(img, w * 0.24, w * 0.98, h * 0.42, h * 0.8, 4, 6, [(130, 230, 255), (255, 140, 200), (255, 225, 90), (150, 255, 170)], holes=holes, falling=falling, cracked={(2, 3), (1, 2)})
+    # players hopping between the tiles that are left
+    for (r, c), shirt, pose in (((0, 4), SHIRTS[0], "run"), ((1, 1), SHIRTS[2], "cheer"), ((2, 3), SHIRTS[3], "run"), ((1, 5), SHIRTS[5], "stand")):
+        cx, cy, tw, th = centres[(r, c)]
+        fig = runner(th * 2.6, shirt, pose, flip=c > 3)
+        img.alpha_composite(fig, (int(cx - fig.width / 2), int(cy - fig.height * 0.92)))
+    cx, cy, tw, th = centres[(3, 2)]
+    paste_center(img, runner(th * 2.4, SHIRTS[4], "fly", "dizzy", angle=25), cx, cy + th * 1.2)
+    cx, cy, tw, th = centres[(2, 3)]
+    ring(ImageDraw.Draw(img), [cx - tw * 0.85, cy - th * 2.8, cx + tw * 0.85, cy + th * 0.9], h * 0.014)
+    paste_center(img, sticker(face(h * 0.62, shirt=SHIRTS[0], look=(0.8, 0.6)), h * 0.015), w * 0.15, h * 0.68)
+    curved_arrow(img, (w * 0.33, h * 0.33), (w * 0.43, h * 0.24), (cx - tw * 0.95, cy - th * 1.6), h * 0.045)
+    paste_center(img, headline("DON'T FALL!", int(h * 0.19), (255, 250, 150), (255, 80, 40), angle=-3), w * 0.62, h * 0.15)
+    pill(img, w * 0.84, h * 0.9, "LAST ONE STANDING", int(h * 0.045), angle=3)
+    return img
+
+
+def thumb_bonk(size):
+    """BONK THEM OFF: a giant foam hammer launches a rival off the arena."""
+    w, h = size
+    img = sunburst(size, w * 0.62, h * 0.5, (70, 160, 255), (110, 195, 255), count=24, edge=(25, 40, 120))
+    d = ImageDraw.Draw(img)
+    for cx, cy, r in ((0.08, 0.86, 0.07), (0.95, 0.88, 0.06), (0.5, 0.97, 0.06)):
+        cloud(d, w * cx, h * cy, h * r)
+    island(d, w * 0.55, h * 0.66, w * 0.3, (255, 220, 90), depth=h * 0.32)
+    # rivals on the arena and one flying off
+    paste_center(img, runner(h * 0.26, SHIRTS[2], "run", flip=True), w * 0.66, h * 0.55)
+    flyer = runner(h * 0.34, SHIRTS[4], "fly", "dizzy", angle=-40)
+    paste_center(img, flyer, w * 0.86, h * 0.3)
+    d = ImageDraw.Draw(img)
+    motion_lines(d, w * 0.8, h * 0.36, w * 0.12, -25, count=4, spacing=h * 0.035, width=int(h * 0.011))
+    for k in range(5):
+        star(d, w * (0.9 + 0.05 * math.cos(k * 1.25)), h * (0.15 + 0.03 * math.sin(k * 1.25)), h * 0.025, (255, 240, 80), points=5, inner=0.45, outline=INK, width=3)
+    paste_center(img, burst(h * 0.34, text="BONK!"), w * 0.7, h * 0.36)
+    # the smug hammer swinger up front
+    big_hammer = pop(hammer(h * 0.7, angle=-50, sparkle=True), h * 0.012)
+    paste_center(img, big_hammer, w * 0.3, h * 0.48)
+    paste_center(img, sticker(face(h * 0.6, shirt=SHIRTS[0], mood="smug", look=(0.8, 0)), h * 0.015), w * 0.15, h * 0.72)
+    paste_center(img, headline("BONK THEM OFF!", int(h * 0.16), (255, 245, 120), (255, 150, 20), angle=2), w * 0.5, h * 0.12)
+    pill(img, w * 0.84, h * 0.9, "FOAM HAMMERS!", int(h * 0.045), fill=(255, 140, 20), angle=-3)
+    return img
+
+
+def thumb_obbies(size):
+    """30 CRAZY OBBIES: a leap across lava past all five worlds, three stars to win."""
+    w, h = size
+    img = Image.new("RGBA", size, (0, 0, 0, 255))
+    d = ImageDraw.Draw(img)
+    # five slanted stripes, one per world
+    keys = ("candy", "jungle", "frost", "lava", "space")
+    skies = {"candy": (255, 170, 215), "jungle": (120, 200, 120), "frost": (170, 215, 255), "lava": (255, 120, 50), "space": (110, 80, 200)}
+    slant = w * 0.12
+    for i, key in enumerate(keys):
+        xa, xb = w * i / 5 - slant, w * (i + 1) / 5 + slant * 0.0
+        d.polygon([(xa, h), (xb, h), (xb + slant, 0), (xa + slant, 0)], fill=skies[key])
+        d.line([(xb, h), (xb + slant, 0)], fill=(255, 255, 255), width=int(h * 0.008))
+    glow(img, w * 0.5, h * 0.45, h * 0.55, (255, 255, 230), 120)
+    lava(img, h * 0.86)
+    d = ImageDraw.Draw(img)
+    # stepping stones across the worlds, one per world colour
+    stones = [(0.05, 0.2, 0.72), (0.27, 0.38, 0.62), (0.46, 0.56, 0.7), (0.64, 0.74, 0.58), (0.82, 0.98, 0.66)]
+    for (x0, x1, top), key in zip(stones, keys):
+        platform(d, w * x0, w * x1, h * top, WORLDS[key][2], depth=h * 0.06)
+    # gems over the gaps
+    for gx, gy in ((0.235, 0.5), (0.42, 0.45), (0.6, 0.48), (0.78, 0.44)):
+        x, y, r = w * gx, h * gy, h * 0.035
+        d.polygon([(x, y - r * 1.3), (x + r, y), (x, y + r * 1.3), (x - r, y)], fill=(80, 235, 255), outline=INK, width=4)
+        d.polygon([(x, y - r * 1.3), (x + r * 0.35, y), (x, y + r * 0.3), (x - r * 0.35, y)], fill=(210, 250, 255))
+    paste_center(img, runner(h * 0.32, SHIRTS[0], "cheer", angle=-20), w * 0.53, h * 0.47)
+    paste_center(img, runner(h * 0.24, SHIRTS[1], "run"), w * 0.33, h * 0.52)
+    d = ImageDraw.Draw(img)
+    d.arc([w * 0.36, h * 0.36, w * 0.72, h * 0.9], 200, 300, fill=(255, 255, 255), width=int(h * 0.01))
+    # three big stars to earn
+    for k, (sx, sy, r) in enumerate(((0.73, 0.3, 0.07), (0.83, 0.24, 0.09), (0.93, 0.3, 0.07))):
+        glow(img, w * sx, h * sy, h * r * 1.3, (255, 250, 210), 170)
         d = ImageDraw.Draw(img)
-        if key == "space":
-            for _ in range(40):
-                x, y = random.uniform(0, w), random.uniform(0, h * 0.7)
-                d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=(255, 255, 255))
-        if key == "candy":
-            for cx, cy in ((0.25, 0.25), (0.8, 0.85)):
-                cloud(d, w * cx, h * cy, h * 0.06)
-        elif key == "jungle":
-            for k in range(5):
-                x = w * (0.1 + k * 0.2)
-                d.line([x, 0, x + 10, h * random.uniform(0.15, 0.35)], fill=(60, 120, 60), width=6)
-                d.ellipse([x - 4, h * 0.3 - 12, x + 22, h * 0.3 + 6], fill=(80, 160, 80))
-        elif key == "frost":
-            for _ in range(30):
-                x, y = random.uniform(0, w), random.uniform(0, h)
-                d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=(255, 255, 255))
-        elif key == "lava":
-            d.rectangle([0, h * 0.88, w, h], fill=(255, 110, 30))
-        platform(d, w * 0.02, w * 0.36, h * 0.78, floor, depth=30)
-        platform(d, w * 0.64, w * 0.98, h * 0.55, floor, depth=30)
-        # a gem floating over the gap, and a star
-        gx, gy = w * 0.5, h * 0.42
-        d.polygon([(gx, gy - 26), (gx + 20, gy), (gx, gy + 26), (gx - 20, gy)], fill=(80, 230, 255), outline=(20, 110, 150), width=4)
-        star(d, w * 0.82, h * 0.2, 26, (255, 225, 60), points=5, inner=0.45, outline=(160, 100, 0), width=3)
-        jumper = brawler(h * 0.34, shirt=random.choice(SHIRTS), pose="cheer").rotate(-20, resample=Image.BICUBIC, expand=True)
-        paste_center(img, jumper, w * 0.3, h * 0.5)
-        d = ImageDraw.Draw(img)
-        d.arc([w * 0.1, h * 0.35, w * 0.9, h * 1.0], 200, 290, fill=(255, 255, 255), width=5)
-        return img
-    return name, picture
+        star(d, w * sx, h * sy, h * r, (255, 220, 40), points=5, inner=0.45, outline=INK, width=int(h * 0.008))
+    paste_center(img, sticker(face(h * 0.5, shirt=SHIRTS[3], look=(0.9, -0.6), hands=False), h * 0.014), w * 0.12, h * 0.8)
+    paste_center(img, headline("30 CRAZY OBBIES!", int(h * 0.15), (255, 250, 150), (255, 170, 20), angle=-2), w * 0.42, h * 0.13)
+    pill(img, w * 0.83, h * 0.55, "GET ALL 3 STARS?", int(h * 0.045), fill=(130, 60, 230), angle=3)
+    return img
+
+
+def clickbait_icon(s):
+    """The square game icon: a shocked runner and a giant glowing crown."""
+    img = sunburst((s, s), s * 0.5, s * 0.3, (255, 140, 30), (255, 190, 60), count=16, edge=(170, 30, 70))
+    glowing_crown(img, s * 0.5, s * 0.27, s * 0.5, tilt=-8)
+    paste_center(img, sticker(face(s * 0.8, shirt=SHIRTS[1], look=(0, -0.95)), s * 0.018), s * 0.5, s * 0.72)
+    paste_center(img, headline("CROWN RUSH", int(s * 0.115), (255, 250, 150), (255, 170, 20), angle=0), s * 0.5, s * 0.92)
+    return img
 
 
 def main():
     random.seed(7)
 
-    save(icon_art(1024), "game_icon_512.png", (512, 512))
+    save(clickbait_icon(1536), "game_icon_512.png", (512, 512))
+    for k, draw in enumerate((thumb_crown, thumb_survive, thumb_bonk, thumb_obbies), 1):
+        random.seed(k)
+        save(draw((3840, 2160)), "thumbnail_%d_1920x1080.png" % k, (1920, 1080))
 
-    save(scene((1920, 1080), tagline="Race, survive and bonk your way to the crown  -  30 courses  -  15 rounds"), "thumbnail_1_1920x1080.png")
-
-    save(
-        cards_thumbnail(
-            "TOURNAMENTS",
-            "12 runners  -  4 rounds  -  1 crown",
-            [
-                ("RACE", "First over the line wins", (60, 170, 255), lambda size: card_scene("RACE", size)),
-                ("SURVIVAL", "Stay on as the floor falls", (255, 140, 60), lambda size: card_scene("SURVIVAL", size)),
-                ("FIGHT", "Bonk rivals off the ring", (230, 80, 80), lambda size: card_scene("FIGHT", size)),
-                ("TEAM", "Eggs, balls and teamwork", (150, 110, 255), lambda size: card_scene("TEAM", size)),
-            ],
-            (40, 50, 110),
-            (20, 24, 60),
-        ),
-        "thumbnail_2_1920x1080.png",
-    )
-
-    worlds = []
-    for key in ("candy", "jungle", "frost", "lava", "space"):
-        name, picture = world_scene(key)
-        worlds.append((name, "6 courses", WORLDS[key][2], picture))
-    save(cards_thumbnail("ADVENTURE", "30 courses in 5 worlds  -  stars, gems and ghosts", worlds, (60, 40, 110), (25, 20, 55)), "thumbnail_3_1920x1080.png")
-
+    random.seed(7)
     def vip(img, d, s):
         paste_center(img, big_crown(s * 0.62), s / 2, s * 0.42)
 
