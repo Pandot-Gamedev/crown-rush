@@ -7,65 +7,29 @@
 --   tiles    three floors of tiles that drop a moment after you step on them
 --   lava     a spiral of platforms around a tower while the lava rises
 --   sweeper  a round platform with spinning logs to jump, getting faster
+--
+-- Fight rounds are survival rounds with foam hammers: bonk rivals off.
+--   ring     a round ring whose outer edge falls away in two waves
+--   bowl     a round floor with big bumper balls rolling round it
 
-local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Motion = require(Shared.Motion)
 local Worlds = require(Shared.Worlds)
 
 local BotService = require(script.Parent.BotService)
+local ArenaKit = require(script.Parent.ArenaKit)
+local CombatService = require(script.Parent.CombatService)
 
 local SurvivalRound = {}
 SurvivalRound.__index = SurvivalRound
 
-local ROOT_HEIGHT = 3
-local UPRIGHT = CFrame.Angles(0, 0, math.rad(90))
+local ROOT_HEIGHT = ArenaKit.ROOT_HEIGHT
+local UPRIGHT = ArenaKit.UPRIGHT
+local flat, part, rootOf, ring = ArenaKit.flat, ArenaKit.part, ArenaKit.rootOf, ArenaKit.ring
 local random = Random.new()
-
-local function flat(vector)
-	return Vector3.new(vector.X, 0, vector.Z)
-end
-
-local function part(props)
-	local p = Instance.new("Part")
-	p.Anchored = true
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	for key, value in pairs(props) do
-		if key ~= "Parent" and key ~= "Tags" and key ~= "Attributes" then
-			p[key] = value
-		end
-	end
-	for name, value in pairs(props.Attributes or {}) do
-		p:SetAttribute(name, value)
-	end
-	for _, tag in ipairs(props.Tags or {}) do
-		CollectionService:AddTag(p, tag)
-	end
-	p.Parent = props.Parent
-	return p
-end
-
-local function rootOf(entrant)
-	if entrant.bot then
-		return entrant.bot.root
-	end
-	local character = entrant.player and entrant.player.Character
-	return character and character:FindFirstChild("HumanoidRootPart")
-end
-
--- Spots in a ring, facing the middle
-local function ring(center, radius, count)
-	local list = {}
-	for index = 1, count do
-		local angle = (index - 0.5) / count * math.pi * 2
-		local at = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
-		table.insert(list, CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z)))
-	end
-	return list
-end
 
 ------------------------------------------------------------------ Tile Fall
 local Arenas = {}
@@ -368,7 +332,7 @@ Arenas.sweeper = function(arena, world, seconds)
 	local level = 1
 	local startedAt = math.huge
 	function arena.start()
-		startedAt = os.clock()
+		startedAt = Motion.Clock()
 	end
 	-- Changing speed keeps the logs where they are (phase makes up the difference)
 	local function setSpeed(newSpeed)
@@ -381,7 +345,7 @@ Arenas.sweeper = function(arena, world, seconds)
 		end
 	end
 	function arena.update()
-		local wanted = math.clamp(math.floor((os.clock() - startedAt) / (seconds / #speeds)) + 1, 1, #speeds)
+		local wanted = math.clamp(math.floor((Motion.Clock() - startedAt) / (seconds / #speeds)) + 1, 1, #speeds)
 		if wanted ~= level then
 			level = wanted
 			setSpeed(speeds[level])
@@ -429,6 +393,131 @@ Arenas.sweeper = function(arena, world, seconds)
 	end
 end
 
+------------------------------------------------------------------ Fights
+-- Bots in a fight keep away from the edge, walk up to the nearest rival and
+-- bonk. Sharp bots react faster.
+local function fightBrain(arena)
+	return function(bot)
+		local round = arena.round
+		local entrant = round.byBot[bot]
+		local center = arena.origin.Position
+		while true do
+			local position = bot.root.Position
+			local edge = arena.safeRadius()
+			local fromCenter = flat(position - center)
+			local rival, distance = ArenaKit.nearest(position, round.alive, entrant)
+			local rivalRoot = rival and rootOf(rival)
+			if fromCenter.Magnitude > edge - 5 then
+				-- Too close to the edge: back towards the middle
+				local goal = center + (fromCenter.Magnitude > 0.1 and fromCenter.Unit or Vector3.xAxis) * (edge - 12)
+				BotService.RunTo(bot, Vector3.new(goal.X, position.Y, goal.Z), bot.speed, 2)
+			elseif not rivalRoot then
+				BotService.Wait(bot, 0.3)
+			elseif distance <= Config.BonkRange * 0.8 then
+				BotService.Face(bot, rivalRoot.Position)
+				if entrant.fighter then
+					CombatService.TryBonk(entrant.fighter)
+				end
+				BotService.Wait(bot, 0.25 + (1 - bot.skill) * 0.5)
+			else
+				local step = flat(rivalRoot.Position - position)
+				local goal = position + step.Unit * math.min(6, step.Magnitude - 3)
+				local fromGoal = flat(goal - center)
+				if fromGoal.Magnitude > edge - 4 then
+					goal = center + fromGoal.Unit * (edge - 6)
+				end
+				BotService.RunTo(bot, Vector3.new(goal.X, position.Y, goal.Z), bot.speed, 1)
+			end
+		end
+	end
+end
+
+-- A ring: a solid middle, and an outer edge in 12 pieces that falls away in
+-- two waves (flashing first)
+Arenas.ring = function(arena, world, seconds)
+	local origin = arena.origin
+	local inner, outer = 16, 34
+	ArenaKit.disc(arena, inner, 0, world.accent, world.material)
+	local pieces = {}
+	for index = 1, 12 do
+		local angle = (index - 0.5) / 12 * math.pi * 2
+		local middle = (inner + outer) / 2
+		local piece = part({
+			Name = "Edge",
+			Size = Vector3.new(2 * math.pi * middle / 12 + 1, 3, outer - inner + 1),
+			CFrame = origin * CFrame.Angles(0, -angle, 0) * CFrame.new(0, -1.5, -middle),
+			Color = world.floor[(index % #world.floor) + 1],
+			Material = world.material,
+			Parent = arena.folder,
+		})
+		table.insert(pieces, { part = piece, color = piece.Color, wave = index % 2 == 0 and 1 or 2, state = "up" })
+	end
+	arena.killY = origin.Y - 25
+	arena.spawns = ArenaKit.ring(origin.Position + Vector3.new(0, ROOT_HEIGHT, 0), 24, 12)
+
+	local startedAt = math.huge
+	local waves = { seconds * 0.4, seconds * 0.65 }
+	local dropped = 0
+	function arena.start()
+		startedAt = Motion.Clock()
+	end
+	function arena.safeRadius()
+		return dropped >= 1 and inner or outer
+	end
+	function arena.update()
+		local elapsed = Motion.Clock() - startedAt
+		for _, piece in ipairs(pieces) do
+			local dropAt = waves[piece.wave]
+			if piece.state ~= "down" and elapsed >= dropAt then
+				piece.state = "down"
+				piece.part.CanCollide = false
+				piece.part.CanQuery = false
+				piece.part.Transparency = 1
+				dropped = math.max(dropped, piece.wave)
+			elseif piece.state == "up" and elapsed >= dropAt - 3 then
+				piece.state = "warn"
+			end
+			if piece.state == "warn" then
+				-- Flash between its colour and the hazard colour
+				local on = math.floor(elapsed * 4) % 2 == 0
+				piece.part.Color = on and world.hazard or piece.color
+			end
+		end
+	end
+	arena.brain = fightBrain(arena)
+end
+
+-- A bowl: a round floor with three big bumper balls rolling round it
+Arenas.bowl = function(arena, world)
+	local origin = arena.origin
+	local radius = 30
+	ArenaKit.disc(arena, radius, 0, world.floor[1], world.material)
+	ArenaKit.disc(arena, 7, 0.4, world.accent, world.material, 0.8)
+	for index = 0, 2 do
+		local home = origin * CFrame.new(0, 3.5, 0)
+		local offset = CFrame.Angles(0, index * math.pi * 2 / 3, 0) * CFrame.new(15, 0, 0)
+		part({
+			Name = "Bumper",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(7, 7, 7),
+			CFrame = home * offset,
+			Color = world.hazard,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Parent = arena.folder,
+			Tags = { "Hit", Motion.Tag },
+			Attributes = { Motion = "spin", Home = home, Offset = offset, Speed = 0.7, Phase = 0 },
+		})
+	end
+	arena.killY = origin.Y - 25
+	arena.spawns = ArenaKit.ring(origin.Position + Vector3.new(0, ROOT_HEIGHT, 0), 23, 12)
+	function arena.safeRadius()
+		return radius
+	end
+	function arena.update() end
+	arena.brain = fightBrain(arena)
+end
+
 ------------------------------------------------------------------ The round
 -- origin = where this tournament's arenas are built (a CFrame)
 function SurvivalRound.new(t, round, entrants, keep, _number, origin)
@@ -439,27 +528,7 @@ function SurvivalRound.new(t, round, entrants, keep, _number, origin)
 	Arenas[round.arena](arena, world, round.seconds)
 	folder.Parent = Workspace
 
-	-- The stands: a glass box above the arena where those who are out watch
-	local stands = origin * CFrame.new(0, 110, 70)
-	part({
-		Name = "Stands",
-		Size = Vector3.new(40, 1, 16),
-		CFrame = stands,
-		Color = Color3.fromRGB(240, 240, 255),
-		Material = Enum.Material.Glass,
-		Transparency = 0.4,
-		Parent = folder,
-	})
-	for _, offset in ipairs({ CFrame.new(0, 4, -8), CFrame.new(0, 4, 8), CFrame.new(-20, 4, 0), CFrame.new(20, 4, 0) }) do
-		part({
-			Name = "StandsWall",
-			Size = (offset.Position.X == 0) and Vector3.new(40, 8, 1) or Vector3.new(1, 8, 16),
-			CFrame = stands * offset,
-			Transparency = 1,
-			Parent = folder,
-		})
-	end
-	arena.stands = CFrame.lookAt((stands * CFrame.new(0, 4, 0)).Position, origin.Position)
+	ArenaKit.stands(arena)
 
 	local self = setmetatable({
 		t = t,
@@ -469,8 +538,13 @@ function SurvivalRound.new(t, round, entrants, keep, _number, origin)
 		arena = arena,
 		alive = {},
 		out = {},
+		byBot = {},
 	}, SurvivalRound)
+	arena.round = self
 	for index, entrant in ipairs(entrants) do
+		if entrant.bot then
+			self.byBot[entrant.bot] = entrant
+		end
 		local spot = arena.spawns[(index - 1) % #arena.spawns + 1]
 		t:Place(entrant, spot)
 		table.insert(self.alive, entrant)
@@ -487,14 +561,16 @@ function SurvivalRound:knockOut(entrant)
 	table.remove(self.alive, index)
 	table.insert(self.out, entrant)
 	self.t:SetInRound(entrant, false)
+	if entrant.fighter then
+		local by = CombatService.LastHitBy(entrant.fighter, 6)
+		self.t:KnockedOut(by and by.entrant, entrant)
+		CombatService.Leave(entrant)
+	end
 	if entrant.bot then
 		BotService.Stop(entrant.bot)
-		BotService.Place(
-			entrant.bot,
-			self.arena.stands * CFrame.new(random:NextNumber(-14, 14), 0, random:NextNumber(-4, 4))
-		)
+		BotService.Place(entrant.bot, ArenaKit.standsSpot(self.arena, random))
 	else
-		self.t:Place(entrant, self.arena.stands * CFrame.new(random:NextNumber(-14, 14), 0, random:NextNumber(-4, 4)))
+		self.t:Place(entrant, ArenaKit.standsSpot(self.arena, random))
 	end
 	self.t:OutOfRound(entrant, #self.alive + 1)
 end
@@ -509,8 +585,14 @@ function SurvivalRound:Play()
 	if arena.start then
 		arena.start()
 	end
+	if self.round.hammers then
+		for _, entrant in ipairs(self.alive) do
+			CombatService.Join(entrant, self)
+		end
+	end
 	local endsAt = Workspace:GetServerTimeNow() + self.round.seconds
-	t:Announce("timer", { endsAt = endsAt, text = string.format("Survive! %d go through", self.keep) })
+	local goal = self.round.hammers and "Bonk them off! %d go through" or "Survive! %d go through"
+	t:Announce("timer", { endsAt = endsAt, text = string.format(goal, self.keep) })
 	for _, entrant in ipairs(self.entrants) do
 		if entrant.bot then
 			local bot = entrant.bot
@@ -584,8 +666,20 @@ function SurvivalRound:Play()
 	return qualified, eliminated
 end
 
+-- The fighters a hammer can hit: everyone still in
+function SurvivalRound:Targets()
+	local list = {}
+	for _, entrant in ipairs(self.alive) do
+		if entrant.fighter then
+			table.insert(list, entrant.fighter)
+		end
+	end
+	return list
+end
+
 function SurvivalRound:Cleanup()
 	for _, entrant in ipairs(self.entrants) do
+		CombatService.Leave(entrant)
 		if entrant.bot then
 			BotService.Stop(entrant.bot)
 		end

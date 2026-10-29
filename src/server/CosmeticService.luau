@@ -367,9 +367,8 @@ end
 function CosmeticService.SetHammer(model, on, player)
 	model:SetAttribute("HasHammer", on or nil)
 	if on then
-		if player then
-			CosmeticService.BuildHammer(model, CosmeticService.Equipped(player, "hammer"))
-		end
+		-- Bots get the plain foam hammer
+		CosmeticService.BuildHammer(model, player and CosmeticService.Equipped(player, "hammer") or nil)
 	else
 		local hammer = model:FindFirstChild("BonkHammer")
 		if hammer then

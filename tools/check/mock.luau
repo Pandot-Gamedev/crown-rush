@@ -162,7 +162,13 @@ mt.__index = function(self, key)
 		return rawget(self, "_parent")
 	elseif key == "Position" and props.CFrame then
 		return props.CFrame.Position
-	elseif key == "Destroying" or key == "AncestryChanged" or key == "Changed" or key == "DescendantAdded" then
+	elseif
+		key == "Destroying"
+		or key == "AncestryChanged"
+		or key == "Changed"
+		or key == "DescendantAdded"
+		or key == "AttributeChanged"
+	then
 		local list = rawget(self, "_signals")
 		list[key] = list[key] or signal()
 		return list[key]
@@ -332,6 +338,10 @@ function methods:SetAttribute(name, value)
 	local changed = rawget(self, "_signals")["attr:" .. name]
 	if changed then
 		changed:Fire()
+	end
+	local any = rawget(self, "_signals").AttributeChanged
+	if any then
+		any:Fire(name)
 	end
 end
 

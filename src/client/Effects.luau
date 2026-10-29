@@ -199,7 +199,13 @@ local handlers = {
 		Effects.Burst(position + Vector3.new(0, 2, 0), { Color3.fromRGB(90, 255, 140), Color3.new(1, 1, 1) }, 30, 20)
 		Effects.Sound("ding", position)
 	end,
-	gem = function(position)
+	gem = function(position, extra)
+		if extra and extra.quiet then
+			-- A pick-up in a tournament round (gems, eggs, tails): smaller
+			Effects.Burst(position, { Color3.fromRGB(80, 230, 255), Color3.new(1, 1, 1) }, 12, 14)
+			Effects.Sound("ding", position)
+			return
+		end
 		Effects.Burst(position, { Color3.fromRGB(80, 230, 255), Color3.new(1, 1, 1) }, 40, 22)
 		Effects.Popup(position + Vector3.new(0, 2, 0), "GEM!", Color3.fromRGB(80, 230, 255), 40, 1.2)
 		Effects.Sound("ding", position)

@@ -5,8 +5,10 @@
 -- kind:
 --   "race"      first ones over the line go through (course pieces, like Courses)
 --   "survival"  stay on the arena; the last ones standing go through
+--   "fight"     a survival round with foam hammers: bonk rivals off
+--   "objective" score points (gems, tails, time on the hill); the top scores go through
+--   "team"      teams play for points; the team with the fewest is out
 --   "final"     a race where only the winner counts: first to grab the crown
---   (fight, objective and team rounds come in step 5)
 
 local Rounds = {}
 
@@ -110,6 +112,80 @@ Rounds.List = {
 		blurb = "Jump the sweeping logs. They get faster!",
 		arena = "sweeper",
 		seconds = 75,
+	},
+
+	------------------------------------------------------------------ Fight
+	{
+		id = "bonk_ring",
+		kind = "fight",
+		name = "Bonk Ring",
+		world = "candy",
+		blurb = "Bonk rivals off the ring with your hammer. The edge falls away!",
+		arena = "ring",
+		seconds = 90,
+		hammers = true,
+	},
+	{
+		id = "bumper_bowl",
+		kind = "fight",
+		name = "Bumper Bowl",
+		world = "space",
+		blurb = "Bonk rivals off the bowl, and watch out for the bumpers!",
+		arena = "bowl",
+		seconds = 90,
+		hammers = true,
+	},
+
+	------------------------------------------------------------------ Objective
+	{
+		id = "gem_grab",
+		kind = "objective",
+		name = "Gem Grab",
+		world = "jungle",
+		blurb = "Grab the most gems! Bonk rivals to make them drop theirs.",
+		arena = "gems",
+		seconds = 75,
+		hammers = true,
+	},
+	{
+		id = "tail_tag",
+		kind = "objective",
+		name = "Tail Tag",
+		world = "frost",
+		blurb = "Grab a tail and keep it! Whoever has a tail at the end goes through.",
+		arena = "tails",
+		seconds = 75,
+	},
+	{
+		id = "king_hill",
+		kind = "objective",
+		name = "King of the Hill",
+		world = "lava",
+		blurb = "Stand on the hill to score. Bonk everyone else off it!",
+		arena = "hill",
+		seconds = 75,
+		hammers = true,
+	},
+
+	------------------------------------------------------------------ Team
+	{
+		id = "egg_scramble",
+		kind = "team",
+		name = "Egg Scramble",
+		world = "candy",
+		blurb = "Carry eggs to your team's nest. Steal from the others! Fewest eggs is out.",
+		arena = "eggs",
+		seconds = 90,
+		hammers = true,
+	},
+	{
+		id = "ball_rush",
+		kind = "team",
+		name = "Ball Rush",
+		world = "space",
+		blurb = "Push the giant ball into the other goals and guard your own!",
+		arena = "ball",
+		seconds = 90,
 	},
 
 	------------------------------------------------------------------ Final

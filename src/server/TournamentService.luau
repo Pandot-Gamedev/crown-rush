@@ -23,6 +23,7 @@ local TutorialService = require(script.Parent.TutorialService)
 local BotService = require(script.Parent.BotService)
 local RaceRound = require(script.Parent.RaceRound)
 local SurvivalRound = require(script.Parent.SurvivalRound)
+local GameRound = require(script.Parent.GameRound)
 
 local TournamentService = {}
 
@@ -43,6 +44,9 @@ local ROUND_TYPES = {
 	race = RaceRound,
 	final = RaceRound,
 	survival = SurvivalRound,
+	fight = SurvivalRound,
+	objective = GameRound,
+	team = GameRound,
 }
 
 local pads = {} -- [slot] = pad
@@ -169,6 +173,19 @@ function Tournament:OutOfRound(entrant, place)
 	end
 end
 
+-- by knocked victim off the arena with a hammer (by may be nil: a plain fall)
+function Tournament:KnockedOut(by, victim)
+	local root = rootOf(victim)
+	if root then
+		Remotes.Effect:FireAllClients("ko", root.Position)
+	end
+	if by and by.player and by.player.Parent and by ~= victim then
+		by.kos = (by.kos or 0) + 1
+		ProgressService.AddResult(by.player, { stats = { kos = 1 }, quiet = true })
+		notify(by.player, "You knocked " .. victim.name .. " off!", "success")
+	end
+end
+
 -- Coins and XP for a player whose tournament is over (out, left, or won)
 function Tournament:Reward(entrant, won)
 	local player = entrant.player
@@ -256,6 +273,7 @@ local function run(t)
 			warn("[TournamentService] Couldn't build " .. round.id .. ": " .. tostring(match))
 			break
 		end
+		t.match = match
 		t:Announce("intro", {
 			number = number,
 			total = #t.plan,

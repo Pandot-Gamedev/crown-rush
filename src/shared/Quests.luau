@@ -13,7 +13,7 @@ Quests.Pool = {
 	{ id = "rounds", stat = "rounds", text = "Survive %d tournament rounds", goal = { 3, 8 }, coins = 100 },
 	{ id = "qualified", stat = "qualified", text = "Qualify in %d races", goal = { 2, 4 }, coins = 90 },
 	{ id = "crowns", stat = "crowns", text = "Win %d tournament", goal = { 1, 1 }, coins = 150 },
-	{ id = "kos", stat = "kos", text = "Knock %d rivals out in fight rounds", goal = { 3, 6 }, coins = 90 },
+	{ id = "kos", stat = "kos", text = "Knock %d rivals off with your hammer", goal = { 3, 6 }, coins = 90 },
 }
 
 Quests.ById = {}

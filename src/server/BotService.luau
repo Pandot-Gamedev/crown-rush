@@ -266,6 +266,13 @@ end
 -- bot.onFrame(bot) returns true when the bot was knocked or fell and should stop
 local function frame(bot)
 	local dt = step()
+	-- Bonked by someone's hammer (see BotService.Push)
+	local push = bot.pendingPush
+	if push and not bot.flying then
+		bot.pendingPush = nil
+		BotService.Knock(bot, push, flat(push).Magnitude, push.Y)
+		error("bot interrupted", 0)
+	end
 	if bot.onFrame and bot.onFrame(bot) then
 		error("bot interrupted", 0)
 	end
@@ -296,6 +303,10 @@ end
 function BotService.RunTo(bot, target, speed, close)
 	speed = speed or bot.speed
 	close = close or 1
+	if flat(target - bot.root.Position).Magnitude <= close then
+		frame(bot) -- already there: still let a frame pass, so callers' loops always yield
+		return
+	end
 	BotService.Animate(bot, "run", speed / 16)
 	while true do
 		local position = bot.root.Position
@@ -362,20 +373,33 @@ function BotService.Wait(bot, seconds)
 	end
 end
 
--- Knocked by an obstacle: flies away, then lands or falls
-function BotService.Knock(bot, push)
+-- Knocked by an obstacle (or a hammer): flies away, then lands or falls.
+-- Same knock as a player gets, so bots fly off edges just like you do.
+function BotService.Knock(bot, push, speed, up)
 	BotService.Animate(bot, "fall")
 	local direction = flat(push)
 	direction = direction.Magnitude > 0.1 and direction.Unit or -flat(bot.root.CFrame.LookVector)
-	-- Same knock as a player gets, so bots fly off edges just like you do
-	bot.vy = Config.HitUp
+	bot.vy = up or Config.HitUp
 	local saved = bot.onFrame
 	bot.onFrame = nil -- no second knock in the air
-	local ok, err = pcall(BotService.Fall, bot, direction * Config.HitSpeed)
+	bot.flying = true
+	local ok, err = pcall(BotService.Fall, bot, direction * (speed or Config.HitSpeed))
+	bot.flying = false
+	bot.pendingPush = nil
 	bot.onFrame = saved
 	if not ok then
 		error(err, 0)
 	end
+end
+
+-- Turns the bot to look at a point
+function BotService.Face(bot, target)
+	face(bot, bot.root.Position, target - bot.root.Position)
+end
+
+-- A hammer hit: the bot flies off with this velocity on its next frame
+function BotService.Push(bot, velocity)
+	bot.pendingPush = velocity
 end
 
 -- Runs fn(bot) in its own thread (stops any earlier one)
@@ -395,6 +419,8 @@ function BotService.Stop(bot)
 	end
 	bot.thread = nil
 	bot.onFrame = nil
+	bot.pendingPush = nil
+	bot.flying = false
 end
 
 ------------------------------------------------------------------ Racing a course
@@ -410,11 +436,21 @@ local function hazardsOf(course)
 			local hit = CollectionService:HasTag(part, "Hit")
 			local kill = CollectionService:HasTag(part, "Kill")
 			if hit or kill then
-				local spec = CollectionService:HasTag(part, Motion.Tag) and Motion.Read(part) or nil
-				table.insert(
-					list,
-					{ part = part, spec = spec, hit = hit, size = part.Size, ball = part.Shape == Enum.PartType.Ball }
-				)
+				local moving = CollectionService:HasTag(part, Motion.Tag)
+				local hazard = {
+					part = part,
+					spec = moving and Motion.Read(part) or nil,
+					hit = hit,
+					size = part.Size,
+					ball = part.Shape == Enum.PartType.Ball,
+				}
+				if moving then
+					-- The sweeper speeds up by changing its attributes
+					part.AttributeChanged:Connect(function()
+						hazard.spec = Motion.Read(part)
+					end)
+				end
+				table.insert(list, hazard)
 			end
 		end
 	end

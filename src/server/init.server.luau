@@ -18,6 +18,7 @@ local CourseService = require(script.CourseService)
 local TrialService = require(script.TrialService)
 local AdventureService = require(script.AdventureService)
 local WorldService = require(script.WorldService)
+local CombatService = require(script.CombatService)
 local TournamentService = require(script.TournamentService)
 
 -- Players' screens can't check who owns a private server, so share it
@@ -43,6 +44,7 @@ CourseService.Start()
 TrialService.Start()
 AdventureService.Start(lobbySpawn)
 WorldService.Start(lobbySpawn)
+CombatService.Start()
 TournamentService.Start(lobbySpawn)
 DataService.Start()
 

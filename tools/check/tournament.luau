@@ -113,6 +113,7 @@ local function main()
 	-- Player 1 runs every race: along the path, a little each frame
 	local botMoved = false
 	local lastRound = 0
+	local startedAt = os.clock()
 	local deadline = os.clock() + 240
 	while not t.over and os.clock() < deadline do
 		if t.roundNumber ~= lastRound then
@@ -121,7 +122,32 @@ local function main()
 			for _, entrant in ipairs(t.entrants) do
 				alive += entrant.alive and 1 or 0
 			end
-			print(string.format("  round %d: %s, %d still in", lastRound, t.round and t.round.id or "?", alive))
+			print(
+				string.format(
+					"  round %d: %s, %d still in (%.0fs)",
+					lastRound,
+					t.round and t.round.id or "?",
+					alive,
+					os.clock() - startedAt
+				)
+			)
+		end
+		if process.env.DEBUG and t.match and t.match.arena and os.clock() > (t.debugAt or 0) then
+			t.debugAt = os.clock() + 2
+			local origin = t.match.arena.origin.Position
+			local parts = {}
+			for _, entrant in ipairs(t.match.entrants) do
+				if entrant.bot then
+					local p = entrant.bot.root.Position - origin
+					table.insert(parts, string.format("%s(%.0f,%.0f,%.0f)", entrant.name, p.X, p.Y, p.Z))
+				end
+			end
+			local ball = t.match.arena.folder:FindFirstChild("Ball")
+			if ball then
+				local p = ball.Position - origin
+				table.insert(parts, string.format("BALL(%.0f,%.0f)", p.X, p.Z))
+			end
+			print("    bots: " .. table.concat(parts, " "))
 		end
 		-- Are the bots really moving?
 		for _, entrant in ipairs(t.entrants) do
@@ -133,6 +159,54 @@ local function main()
 			end
 			if bot and bot.root then
 				bot.lastSeen = bot.lastSeen or bot.root.Position
+			end
+		end
+		-- Objective and team rounds: the runner can't really play them here, so
+		-- they "score" enough to go through, and the round's result is printed
+		local match = t.match
+		if match and match.scores and not match.checked then
+			match.checked = true
+			local me
+			for _, entrant in ipairs(match.entrants) do
+				if entrant.player == runner then
+					me = entrant
+				end
+			end
+			if me then
+				local myTeam = match.teamOf and match.teamOf[me]
+				match.scores[me] = 1000
+				function match.SetScore(self, entrant, value)
+					self.scores[entrant] = entrant == me and 1000 or value
+				end
+				function match.AddScore(self, entrant, amount)
+					self.scores[entrant] = entrant == me and 1000 or (self.scores[entrant] or 0) + amount
+				end
+				function match.SetTeamScore(_, team, value)
+					team.real = value
+					team.score = team == myTeam and 1000 or value
+				end
+				if myTeam then
+					myTeam.score = 1000
+				end
+			end
+			local cleanup = match.Cleanup
+			function match.Cleanup(self)
+				print("    " .. self.round.id .. " result: " .. self:StatusText())
+				local scored = 0
+				for entrant, value in pairs(self.scores) do
+					if entrant.bot and value > 0 then
+						scored += 1
+					end
+				end
+				if self.teams then
+					for _, team in ipairs(self.teams) do
+						if (team.real or 0) ~= 0 then
+							scored += 1
+						end
+					end
+				end
+				expect(scored > 0, self.round.id .. ": bots scored")
+				return cleanup(self)
 			end
 		end
 		local run = CourseService.Get(runner)

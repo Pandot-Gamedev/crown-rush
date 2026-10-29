@@ -23,16 +23,18 @@ local TournamentHud = {}
 local player = Players.LocalPlayer
 local CROWN = utf8.char(9819) -- a chess queen, the closest thing to a crown in every font
 
-local KIND_NAMES = { race = "RACE", survival = "SURVIVAL", final = "FINAL", fight = "FIGHT", team = "TEAM" }
+local KIND_NAMES =
+	{ race = "RACE", survival = "SURVIVAL", final = "FINAL", fight = "FIGHT", objective = "POINTS", team = "TEAM" }
 local KIND_COLORS = {
 	race = Color3.fromRGB(60, 170, 255),
 	survival = Color3.fromRGB(255, 140, 60),
 	final = T.Gold,
 	fight = Color3.fromRGB(230, 80, 80),
+	objective = Color3.fromRGB(80, 230, 255),
 	team = Color3.fromRGB(150, 110, 255),
 }
 
-local roundBar, roundTitle, roundTimer, roundStatus
+local roundBar, roundTitle, roundTimer, roundStatus, roundYou
 local introCard, introKind, introName, introBlurb, introKeep
 local countdownLabel, banner, bannerSub
 local endCard, endTitle, endBody, endButtons
@@ -162,6 +164,14 @@ local function build(screenGui)
 		Visible = false,
 		Parent = screenGui,
 	}, { UI.corner(14), UI.stroke(T.Gold, 2) })
+	-- Your own line (score, team, tail) under the status, when a round has one
+	roundYou = UI.label("", {
+		Position = UDim2.fromOffset(14, 90),
+		Size = UDim2.new(1, -28, 0, 20),
+		TextColor3 = T.Text,
+		Visible = false,
+		Parent = roundBar,
+	})
 	roundTitle = UI.label("", {
 		Position = UDim2.fromOffset(14, 6),
 		Size = UDim2.new(1, -28, 0, 20),
@@ -369,6 +379,9 @@ function handlers.intro(info)
 	endsAt = nil
 	roundText = string.format("Round %d of %d  -  %s", info.number, info.total, info.name)
 	roundStatus.Text = ""
+	roundYou.Text = ""
+	roundYou.Visible = false
+	roundYou.TextColor3 = T.Text
 	introKind.Text = string.format("ROUND %d of %d:  %s", info.number, info.total, KIND_NAMES[info.kind] or "")
 	introKind.TextColor3 = KIND_COLORS[info.kind] or T.Accent
 	introName.Text = info.name
@@ -382,6 +395,23 @@ function handlers.intro(info)
 	task.delay(4.6, function()
 		introCard.Visible = false
 	end)
+end
+
+-- Your score or job in this round
+function handlers.you(info)
+	roundYou.Text = info.text or ""
+	roundYou.Visible = info.text ~= nil and info.text ~= ""
+end
+
+function handlers.team(info)
+	roundYou.Text = "You're on the " .. info.name .. " team"
+	roundYou.TextColor3 = info.color
+	roundYou.Visible = true
+	showBanner(string.upper(info.name) .. " TEAM", "Work together! The team with the fewest is out", info.color, 4)
+end
+
+function handlers.flash(info)
+	showBanner(info.text, nil, T.Gold, 2.5)
 end
 
 function handlers.countdown(info)
@@ -470,6 +500,7 @@ function TournamentHud.Init(screenGui)
 		leaveButton.Visible = inTournament
 		watchBar.Visible = watching and not inTournament and not endCard.Visible
 		roundTitle.Text = roundText
+		roundBar.Size = UDim2.fromOffset(440, roundYou.Visible and 116 or 96)
 		local now = Workspace:GetServerTimeNow()
 
 		if endsAt then
