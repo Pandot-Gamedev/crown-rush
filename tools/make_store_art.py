@@ -199,7 +199,7 @@ def motion_lines(d, x, y, length, angle, color=(255, 255, 255), count=3, spacing
 
 
 def save(img, name, size=None):
-    os.makedirs(OUT, exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
     if size:
         img = img.resize(size, Image.LANCZOS)
     img.convert("RGB").save(os.path.join(OUT, name), quality=95)
@@ -768,10 +768,12 @@ def clickbait_icon(s):
 def main():
     random.seed(7)
 
-    save(clickbait_icon(1536), "game_icon_512.png", (512, 512))
+    # The uploaded icon and thumbnails are Rk's AI-generated versions in store/;
+    # these drawn ones go to store/drawn/ for comparison.
+    save(clickbait_icon(1536), "drawn/game_icon_512.png", (512, 512))
     for k, draw in enumerate((thumb_crown, thumb_survive, thumb_bonk, thumb_obbies), 1):
         random.seed(k)
-        save(draw((3840, 2160)), "thumbnail_%d_1920x1080.png" % k, (1920, 1080))
+        save(draw((3840, 2160)), "drawn/thumbnail_%d_1920x1080.png" % k, (1920, 1080))
 
     random.seed(7)
     def vip(img, d, s):
