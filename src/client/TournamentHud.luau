@@ -336,7 +336,7 @@ local function closeEnd()
 	endCard.Visible = false
 end
 
-local function showEnd(title, color, body, withWatch)
+local function showEnd(title, color, body, withWatch, okText)
 	endTitle.Text = title
 	endTitle.TextColor3 = color
 	endBody.Text = body
@@ -354,7 +354,12 @@ local function showEnd(title, color, body, withWatch)
 			act("LeaveTournament")
 		end, { Size = UDim2.fromOffset(180, 44), ZIndex = 5, Parent = endButtons })
 	else
-		UI.button("Nice!", T.Good, closeEnd, { Size = UDim2.fromOffset(180, 44), ZIndex = 5, Parent = endButtons })
+		UI.button(
+			okText or "Nice!",
+			T.Good,
+			closeEnd,
+			{ Size = UDim2.fromOffset(180, 44), ZIndex = 5, Parent = endButtons }
+		)
 	end
 	endCard.Visible = true
 end
@@ -453,13 +458,15 @@ function handlers.eliminated(info)
 		"Eliminated",
 		T.Bad,
 		string.format(
-			"You came %s of %d and survived %s.\n%s\n\nWatch the rest, or head back and queue again.",
+			"You came %s of %d and survived %s.\n%s\n\n%s",
 			ordinal(info.place),
 			info.of,
 			rounds,
-			rewardLine(info)
+			rewardLine(info),
+			info.watchable and "Watch the rest, or head back and queue again." or "Head back and queue again!"
 		),
-		true
+		info.watchable,
+		"OK"
 	)
 end
 

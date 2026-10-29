@@ -607,7 +607,7 @@ function SurvivalRound:Play()
 						error(err, 0)
 					end
 					-- Knocked and landed: get going again
-					BotService.Wait(bot, 0.2)
+					BotService.Recover(bot, 0.2)
 				end
 			end)
 		end

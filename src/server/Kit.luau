@@ -474,7 +474,8 @@ B.movers = function(pc, o)
 			kind = "ride",
 			spec = spec,
 			enter = pc:P(0, 0, z - gapBefore),
-			exit = pc:P(0, 0, zCenter + size / 2 + 5),
+			-- just onto what comes next (forward platforms travel dist further first)
+			exit = pc:P(0, 0, z + size + (forward and dist or 0) + 6),
 			forward = forward,
 		})
 		z += size + (forward and dist or 0)
@@ -531,7 +532,11 @@ B.spinner = function(pc, o)
 			CanCollide = false,
 		}, { Motion = "spin", Home = home, Speed = -speed * 0.8, Phase = math.pi / 2 }, { "Hit" })
 	end
+	-- Bots cross off-centre: near the hub the bar is too slow to hop over
+	local side = o.side or 1
 	pc:Go(0, 0, z - radius + 2)
+	pc:Go(side * radius * 0.45, 0, z - radius * 0.5, { hazard = true })
+	pc:Go(side * radius * 0.45, 0, z + radius * 0.5, { hazard = true })
 	pc:Go(0, 0, z + radius - 2, { hazard = true })
 	pc:Floor(0, 0, z * 2 - 1, 12, 4)
 	pc:Go(0, 0, z * 2)
@@ -592,7 +597,8 @@ B.hammers = function(pc, o)
 			Material = Enum.Material.SmoothPlastic,
 			CanCollide = false,
 		}, head, { "Hit" })
-		pc:Go(0, 0, z, { hazard = true })
+		-- Bots stop between hammers and time each dash
+		pc:Go(0, 0, z + spacing / 2, { hazard = true })
 	end
 	pc:Rails(0, 0, l, w)
 	pc:Go(0, 0, l)
@@ -623,7 +629,9 @@ B.balls = function(pc, o)
 			Color = pc.theme.edge,
 		})
 	end
-	local radius = 2.4
+	-- One boulder per lane at a time, staggered between lanes: dodge into
+	-- another lane or jump it (they're low enough to jump)
+	local radius = 2
 	local lanesX = {}
 	for lane = 1, lanes do
 		local x = -w / 2 + 1 + (lane - 0.5) * laneWidth
@@ -631,24 +639,23 @@ B.balls = function(pc, o)
 		-- Balls start at the top and roll down: home faces down the ramp
 		local top = pc:C(x, rise + radius, l)
 		local home = CFrame.lookAt(top.Position, pc:P(x, radius, 0))
-		for ball = 0, 1 do
-			pc:Mover({
-				Name = "Ball",
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.one * radius * 2,
-				Color = pc.theme.hazard,
-				Material = Enum.Material.SmoothPlastic,
-				CanCollide = false,
-			}, {
-				Motion = "ball",
-				Home = home,
-				Length = slope + 6,
-				Travel = 2.6,
-				Period = period,
-				Phase = (lane - 1) * period / lanes + ball * period / 2,
-				Radius = radius,
-			}, { "Hit" })
-		end
+		pc:Mover({
+			Name = "Ball",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * radius * 2,
+			Color = pc.theme.hazard,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			Attributes = { Low = true },
+		}, {
+			Motion = "ball",
+			Home = home,
+			Length = slope + 3,
+			Travel = 2.6,
+			Period = period,
+			Phase = (lane - 1) * period / lanes,
+			Radius = radius,
+		}, { "Hit" })
 	end
 	pc:Node({
 		kind = "dodge",
@@ -740,20 +747,25 @@ B.fall = function(pc, o)
 	local w = cols * size
 	local l = rows * size + 4
 	pc:Floor(0, 0, 2, 16, 4)
+	local tileRows = {}
 	for row = 1, rows do
+		local tiles = {}
 		for col = 1, cols do
 			local x = -w / 2 + (col - 0.5) * size
 			local z = 4 + (row - 0.5) * size
-			pc:Part({
+			local tile = pc:Part({
 				Name = "FallTile",
 				Size = Vector3.new(size - 0.3, 1.5, size - 0.3),
 				CFrame = pc:C(x, -0.75, z),
 				Color = (row + col) % 2 == 0 and pc.theme.floor[1] or pc.theme.floor[2],
 				Tags = { "FallTile" },
 			})
+			table.insert(tiles, { part = tile, at = pc:P(x, 0, z) })
 		end
+		table.insert(tileRows, tiles)
 	end
-	pc:Go(0, 0, l / 2, { hazard = true })
+	-- Bots step from row to row onto tiles that haven't started to fall
+	pc:Node({ kind = "fall", rows = tileRows, to = pc:P(0, 0, l) })
 	pc:Floor(0, 0, l + 3, 16, 6)
 	pc:Go(0, 0, l + 3)
 	if o.gem then
@@ -1231,7 +1243,7 @@ B.pushers = function(pc, o)
 			Period = period,
 			Phase = index * period / count,
 		}, { "Hit" })
-		pc:Go(0, 0, z, { hazard = true })
+		pc:Go(0, 0, z + spacing / 2, { hazard = true })
 	end
 	pc:Go(0, 0, l)
 	if o.gem then

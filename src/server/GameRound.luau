@@ -1105,7 +1105,7 @@ function GameRound:StartBot(entrant)
 			if not ok and err ~= "bot interrupted" then
 				error(err, 0)
 			end
-			BotService.Wait(bot, 0.2)
+			BotService.Recover(bot, 0.2)
 		end
 	end)
 end

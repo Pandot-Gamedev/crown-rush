@@ -78,10 +78,16 @@ BotService.Folder = nil
 local ROOT_HEIGHT = 3 -- the root's middle sits this far above the floor
 local GRAVITY = 196.2
 local ZIP_SPEED = 48
+local HOP_HEIGHT = 6 -- a hop over a low bar or boulder while running (players jump about 7)
+local HOP_TIME = 0.6
 local random = Random.new()
 local nameIndex = random:NextInteger(1, #NAMES)
 local botCount = 0
 local rayParams = RaycastParams.new()
+-- Which Start each bot thread belongs to. A thread whose bot was stopped (or
+-- started again) ends at its next frame, even when it was the one that
+-- stopped it (a bot that falls in lava stops itself).
+local threadGeneration = setmetatable({}, { __mode = "k" })
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local function flat(vector)
@@ -262,10 +268,40 @@ local function step()
 	return RunService.Heartbeat:Wait()
 end
 
+-- Hops over low bars (spinner bars, logs) that are about to reach the bot.
+-- bot.hazards is set by HazardCheck. Returns how high the bot is in its hop.
+local function hopHeight(bot, base, velocity)
+	local t = Motion.Clock()
+	if bot.hopStart and t - bot.hopStart < HOP_TIME then
+		local share = (t - bot.hopStart) / HOP_TIME
+		return 4 * HOP_HEIGHT * share * (1 - share)
+	end
+	bot.hopStart = nil
+	-- Sharp bots see it coming; others sometimes jump a bit early or late
+	local lead = 0.12 + random:NextNumber(-0.1, 0.1) * (1.2 - (bot.skill or 0.5))
+	for _, hazard in ipairs(bot.hazards or {}) do
+		if hazard.low and hazard.spec and BotService.Touching(hazard, base + velocity * lead, t + lead) then
+			bot.hopStart = t
+			BotService.Animate(bot, "jump")
+			return 0
+		end
+	end
+	return 0
+end
+
+local function stopHop(bot)
+	bot.hopStart = nil
+	bot.hopNow = 0
+end
+
 -- Things that happen to a bot every frame (set by whoever drives it):
 -- bot.onFrame(bot) returns true when the bot was knocked or fell and should stop
 local function frame(bot)
 	local dt = step()
+	local generation = threadGeneration[coroutine.running()]
+	if generation and generation ~= bot.generation then
+		error("bot stopped", 0)
+	end
 	-- Bonked by someone's hammer (see BotService.Push)
 	local push = bot.pendingPush
 	if push and not bot.flying then
@@ -281,14 +317,18 @@ end
 
 -- Falls straight down until it lands (or forever, if there's nothing below)
 function BotService.Fall(bot, push)
+	stopHop(bot)
 	bot.vy = bot.vy or 0
 	push = push or Vector3.zero
 	BotService.Animate(bot, "fall")
 	while true do
 		local dt = frame(bot)
 		bot.vy -= GRAVITY * dt
-		local position = bot.root.Position + push * dt + Vector3.new(0, bot.vy * dt, 0)
-		local floor = bot.vy < 0 and floorAt(position, 1, 2)
+		local old = bot.root.Position
+		local position = old + push * dt + Vector3.new(0, bot.vy * dt, 0)
+		-- Look from just above where the feet were down to where they are now,
+		-- so a fast fall can't skip through a thin floor between two frames
+		local floor = bot.vy < 0 and floorAt(position, old.Y - position.Y + 1, ROOT_HEIGHT)
 		if floor and position.Y - ROOT_HEIGHT <= floor + 0.2 then
 			bot.vy = 0
 			face(bot, Vector3.new(position.X, floor + ROOT_HEIGHT, position.Z), push)
@@ -309,33 +349,45 @@ function BotService.RunTo(bot, target, speed, close)
 	end
 	BotService.Animate(bot, "run", speed / 16)
 	while true do
-		local position = bot.root.Position
+		-- Where the bot would be without its hop
+		local position = bot.root.Position - Vector3.new(0, bot.hopNow or 0, 0)
 		local offset = flat(target - position)
 		if offset.Magnitude <= close then
+			if (bot.hopNow or 0) > 0 then
+				-- Land the hop before moving on
+				face(bot, position, offset)
+			end
+			stopHop(bot)
 			return
 		end
 		local dt = frame(bot)
 		local move = offset.Unit * math.min(offset.Magnitude, speed * dt)
 		local nextPosition = position + move
-		local floor = floorAt(nextPosition, 3, 3)
+		-- Steps up to 3 studs up, and follows slopes and steps down to 1.5 below the feet
+		local floor = floorAt(nextPosition, 3, ROOT_HEIGHT + 1.5)
 		if floor then
 			nextPosition = Vector3.new(nextPosition.X, floor + ROOT_HEIGHT, nextPosition.Z)
 		else
 			-- Nothing underfoot: keep running onto the target's height if it's close, else fall
 			local expected = target.Y
 			if math.abs(nextPosition.Y - ROOT_HEIGHT - expected) > 1.5 then
-				face(bot, nextPosition, offset)
+				face(bot, nextPosition + Vector3.new(0, bot.hopNow or 0, 0), offset)
+				stopHop(bot)
 				bot.vy = 0
 				BotService.Fall(bot, offset.Unit * speed * 0.5)
 				return
 			end
 		end
-		face(bot, nextPosition, offset)
+		bot.hopNow = hopHeight(bot, nextPosition, offset.Unit * speed)
+		face(bot, nextPosition + Vector3.new(0, bot.hopNow, 0), offset)
 	end
 end
 
 -- Jumps in an arc to target (a floor point). Lands on whatever is there.
-function BotService.JumpTo(bot, target, extraHeight, speed)
+-- exact = true lands right on target without looking for the floor (moving
+-- platforms only move on players' screens, so the server can't see them)
+function BotService.JumpTo(bot, target, extraHeight, speed, exact)
+	stopHop(bot)
 	local from = bot.root.Position
 	local to = target + Vector3.new(0, ROOT_HEIGHT, 0)
 	local distance = flat(to - from).Magnitude
@@ -354,7 +406,7 @@ function BotService.JumpTo(bot, target, extraHeight, speed)
 		local height = from.Y + (to.Y - from.Y) * share + 4 * (apex - rise / 2) * share * (1 - share)
 		face(bot, Vector3.new(along.X, height, along.Z), to - from)
 	end
-	local floor = floorAt(bot.root.Position, 1, 3)
+	local floor = exact and target.Y or floorAt(bot.root.Position, 1, ROOT_HEIGHT + 1.5)
 	if floor then
 		face(bot, Vector3.new(to.X, floor + ROOT_HEIGHT, to.Z), to - from)
 		BotService.Animate(bot, "run", bot.speed / 16)
@@ -370,6 +422,15 @@ function BotService.Wait(bot, seconds)
 	local t = 0
 	while t < seconds do
 		t += frame(bot)
+	end
+end
+
+-- Waits a moment after a knock before carrying on. Another knock during the
+-- wait has already happened (the bot flew and landed), so it just ends the wait.
+function BotService.Recover(bot, seconds)
+	local ok, err = pcall(BotService.Wait, bot, seconds)
+	if not ok and err ~= "bot interrupted" then
+		error(err, 0)
 	end
 end
 
@@ -405,15 +466,18 @@ end
 -- Runs fn(bot) in its own thread (stops any earlier one)
 function BotService.Start(bot, fn, ...)
 	BotService.Stop(bot)
+	local generation = bot.generation
 	bot.thread = task.spawn(function(...)
+		threadGeneration[coroutine.running()] = generation
 		local ok, err = pcall(fn, bot, ...)
-		if not ok and err ~= "bot interrupted" then
+		if not ok and err ~= "bot interrupted" and err ~= "bot stopped" then
 			warn("[BotService] " .. bot.name .. ": " .. tostring(err))
 		end
 	end, ...)
 end
 
 function BotService.Stop(bot)
+	bot.generation = (bot.generation or 0) + 1
 	if bot.thread and bot.thread ~= coroutine.running() then
 		pcall(task.cancel, bot.thread)
 	end
@@ -421,6 +485,9 @@ function BotService.Stop(bot)
 	bot.onFrame = nil
 	bot.pendingPush = nil
 	bot.flying = false
+	bot.hazards = nil
+	bot.onSpec = nil
+	stopHop(bot)
 end
 
 ------------------------------------------------------------------ Racing a course
@@ -443,6 +510,7 @@ local function hazardsOf(course)
 					hit = hit,
 					size = part.Size,
 					ball = part.Shape == Enum.PartType.Ball,
+					low = part:GetAttribute("Low") == true,
 				}
 				if moving then
 					-- The sweeper speeds up by changing its attributes
@@ -502,6 +570,7 @@ BotService.Touching = touching
 function BotService.HazardCheck(holder, onKill)
 	local hazards = hazardsOf(holder)
 	return function(bot)
+		bot.hazards = hazards -- for hopping over low bars (see RunTo)
 		local position = bot.root.Position
 		local t = Motion.Clock()
 		for _, hazard in ipairs(hazards) do
@@ -535,6 +604,46 @@ end
 local function platformAt(spec, t)
 	local cframe, state = Motion.At(spec, t)
 	return cframe, state
+end
+
+-- Would running from one point to another at this speed, starting now, get
+-- the bot hit by a moving obstacle? (Low bars don't count: bots hop those.)
+local function pathIsClear(bot, from, to, speed)
+	local hazards = bot.hazards
+	if not hazards then
+		return true
+	end
+	local t0 = Motion.Clock()
+	local distance = (to - from).Magnitude
+	local duration = distance / speed
+	local step = 0.05
+	local time = 0
+	while time <= duration + 0.2 do
+		local position = from:Lerp(to, math.min(1, time / math.max(duration, 0.01)))
+		for _, hazard in ipairs(hazards) do
+			if hazard.spec and not hazard.low and touching(hazard, position, t0 + time) then
+				return false
+			end
+		end
+		time += step
+	end
+	return true
+end
+
+-- Waits for a clear moment to run from where the bot is to target. Sharp
+-- bots wait for a really clear run; hasty ones sometimes just go for it.
+local function waitForGap(bot, target, speed, patience)
+	if random:NextNumber() > bot.skill + 0.35 then
+		patience = math.min(patience, random:NextNumber(0.3, 1.5))
+	end
+	local waited = 0
+	while waited < patience do
+		if pathIsClear(bot, bot.root.Position, target, speed) then
+			return
+		end
+		BotService.Animate(bot, "idle")
+		waited += frame(bot)
+	end
 end
 
 -- Follows one path node. run = the bot's CourseService run.
@@ -595,29 +704,53 @@ local function follow(bot, _run, node)
 		end
 		BotService.RunTo(bot, node.past + Vector3.new(0, ROOT_HEIGHT, 0), bot.speed * 1.1)
 	elseif kind == "ride" then
-		BotService.RunTo(bot, node.enter + Vector3.new(0, ROOT_HEIGHT, 0))
 		if node.rock or node.spin then
+			BotService.RunTo(bot, node.enter + Vector3.new(0, ROOT_HEIGHT, 0))
 			BotService.RunTo(bot, node.exit + Vector3.new(0, ROOT_HEIGHT, 0))
 			return
 		end
-		-- Wait for the platform to come close, hop on, ride, hop off near the exit
-		local waited = 0
-		while waited < node.spec.period * 1.5 do
-			local cframe = platformAt(node.spec, now())
-			if flat(cframe.Position - node.enter).Magnitude < 7 and math.abs(cframe.Position.Y - node.enter.Y) < 4 then
-				break
-			end
-			waited += frame(bot)
+		-- Moving platforms: hop on when one comes close, ride it, and hop off
+		-- (or straight onto the next platform) when the way on is in reach
+		local spec = node.spec
+		local top = node.enter.Y
+		local function topOf(platformSpec, t)
+			local position = platformAt(platformSpec, t).Position
+			return Vector3.new(position.X, top, position.Z)
 		end
-		local start = platformAt(node.spec, now())
-		BotService.JumpTo(bot, start.Position + Vector3.new(0, 1, 0), 2)
-		local onPlatform = platformAt(node.spec, now()):ToObjectSpace(bot.root.CFrame)
+		local nextNode = bot.nextNode
+		local nextSpec = nextNode and nextNode.kind == "ride" and not (nextNode.rock or nextNode.spin) and nextNode.spec
+		local function jumpOnto(platformSpec)
+			local reach = flat(topOf(platformSpec, now() + 0.4) - bot.root.Position).Magnitude
+			local duration = math.max(0.35, reach / bot.speed)
+			BotService.JumpTo(bot, topOf(platformSpec, now() + duration), 2, nil, true)
+		end
+		if bot.onSpec ~= spec then
+			BotService.RunTo(bot, node.enter + Vector3.new(0, ROOT_HEIGHT, 0))
+			local waited = 0
+			while waited < spec.period * 1.5 do
+				if flat(topOf(spec, now() + 0.4) - node.enter).Magnitude < 8 then
+					break
+				end
+				waited += frame(bot)
+			end
+			jumpOnto(spec)
+		end
+		bot.onSpec = nil
+		local onPlatform = platformAt(spec, now()):ToObjectSpace(bot.root.CFrame)
 		local ridden = 0
-		while ridden < node.spec.period * 1.5 do
-			local cframe = platformAt(node.spec, now())
-			bot.root.CFrame = cframe * onPlatform
-			if flat(cframe.Position - node.exit).Magnitude < 9 then
-				break
+		while ridden < spec.period * 2 do
+			local t = now()
+			bot.root.CFrame = platformAt(spec, t) * onPlatform
+			-- (a jump of up to about 16 studs, like a running player's)
+			local goal = nextSpec and topOf(nextSpec, t + 0.8) or node.exit
+			if flat(goal - bot.root.Position).Magnitude < (nextSpec and 16.5 or 12) then
+				if nextSpec then
+					jumpOnto(nextSpec)
+					bot.onSpec = nextSpec
+				else
+					BotService.JumpTo(bot, node.exit, 3)
+				end
+				return
 			end
 			ridden += frame(bot)
 		end
@@ -673,13 +806,100 @@ local function follow(bot, _run, node)
 		local lanes = node.lanes or { 0 }
 		local x = lanes[random:NextInteger(1, #lanes)]
 		local cursor = node.cursor
-		local from = cursor:PointToWorldSpace(Vector3.new(x, 0, 0))
-		local to = cursor:PointToWorldSpace(Vector3.new(x, node.rise or 0, cursor:PointToObjectSpace(node.to).Z))
-		BotService.RunTo(bot, from + Vector3.new(0, ROOT_HEIGHT, 0))
-		BotService.RunTo(bot, to + Vector3.new(0, ROOT_HEIGHT, 0))
+		-- In the piece's own space (forward is -Z, as in Kit's Piece:P)
+		local length = -cursor:PointToObjectSpace(node.to).Z
+		local up = Vector3.new(0, ROOT_HEIGHT, 0)
+		local function at(laneX, z, y)
+			return cursor:PointToWorldSpace(Vector3.new(laneX, y or 0, -z)) + up
+		end
+		local rise = node.rise or 0
+		local function onRamp(laneX, z)
+			return at(laneX, z, rise * math.clamp(z / length, 0, 1))
+		end
+		-- Will this spot (moving up the ramp from z) be clear for the next few moments?
+		local function clearFor(laneX, z, seconds)
+			local t = now()
+			local time = 0
+			while time <= seconds do
+				local spot = onRamp(laneX, z + bot.speed * time)
+				for _, hazard in ipairs(bot.hazards or {}) do
+					if hazard.spec and touching(hazard, spot, t + time) then
+						return false, time
+					end
+				end
+				time += 0.05
+			end
+			return true, seconds
+		end
+		-- Wait a little back from the bottom (boulders roll on past it), then
+		-- run up, stepping into another lane whenever a boulder is coming.
+		-- Sharp bots look further ahead.
+		local look = 0.35 + 0.45 * bot.skill
+		local back = -14
+		BotService.RunTo(bot, onRamp(x, back))
+		local waited = 0
+		while waited < 4 and not clearFor(x, back, look * 1.5) do
+			BotService.Animate(bot, "idle")
+			waited += frame(bot)
+		end
+		local z = back
+		while z < length - 0.5 do
+			local here = cursor:PointToObjectSpace(bot.root.Position)
+			z = math.max(z, -here.Z)
+			local best, bestTime = x, -1
+			local ordered = table.clone(lanes)
+			table.sort(ordered, function(a, b)
+				return math.abs(a - here.X) < math.abs(b - here.X)
+			end)
+			for _, laneX in ipairs(ordered) do
+				local clear, time = clearFor(laneX, z, look)
+				if clear then
+					best = laneX
+					break
+				elseif time > bestTime then
+					best, bestTime = laneX, time
+				end
+			end
+			x = best
+			BotService.RunTo(bot, onRamp(x, math.min(length, z + 2.5)), bot.speed, 0.8)
+			z = math.min(length, z + 2.5)
+		end
+		BotService.RunTo(bot, onRamp(x, length))
+	elseif kind == "fall" then
+		-- Falling tiles: row by row, onto the nearest tile that isn't falling
+		for _, row in ipairs(node.rows) do
+			local waited = 0
+			local pick = nil
+			while not pick do
+				local x = bot.root.Position
+				local bestDistance = math.huge
+				for _, tile in ipairs(row) do
+					if not tile.part:GetAttribute("Falling") then
+						local distance = flat(tile.at - x).Magnitude
+						if distance < bestDistance then
+							pick, bestDistance = tile, distance
+						end
+					end
+				end
+				if not pick then
+					if waited > 3 then
+						pick = row[random:NextInteger(1, #row)]
+					else
+						BotService.Animate(bot, "idle")
+						waited += frame(bot)
+					end
+				end
+			end
+			BotService.RunTo(bot, pick.at + Vector3.new(0, ROOT_HEIGHT, 0), bot.speed, 1.5)
+		end
 	elseif node.to then
-		-- "go" and anything else with a target: run there
-		BotService.RunTo(bot, node.to + Vector3.new(0, ROOT_HEIGHT, 0))
+		-- "go" and anything else with a target: run there. Past moving
+		-- obstacles, wait for a gap first.
+		local target = node.to + Vector3.new(0, ROOT_HEIGHT, 0)
+		if node.hazard then
+			waitForGap(bot, target, bot.speed, 5)
+		end
+		BotService.RunTo(bot, target)
 	end
 end
 
@@ -701,7 +921,8 @@ end
 -- Races a course run until it finishes. Picks up again after every knock and fall.
 function BotService.Race(bot, run, fromNode)
 	local course = run.instance.course
-	local function drive()
+	local nodes = course.nodes
+	local function drive(first)
 		local check = BotService.HazardCheck(course, function()
 			CourseService.Respawn(run)
 		end)
@@ -712,8 +933,9 @@ function BotService.Race(bot, run, fromNode)
 			BotService.Animate(bot, "idle")
 			step()
 		end
-		local nodes = course.nodes
-		for index = fromNode or nodeAfterCheckpoint(nodes, run.checkpoint), #nodes do
+		for index = first, #nodes do
+			bot.model:SetAttribute("PathNode", index) -- shows where a bot is in Studio's Properties
+			bot.nextNode = nodes[index + 1]
 			follow(bot, run, nodes[index])
 		end
 		-- Past the finish: stop and wait
@@ -721,16 +943,22 @@ function BotService.Race(bot, run, fromNode)
 		BotService.Animate(bot, "idle")
 	end
 	BotService.Start(bot, function()
-		local ok, err = pcall(drive)
-		if not ok and err ~= "bot interrupted" then
-			error(err, 0)
-		end
-		-- Knocked but landed: shake it off and carry on from the closest bit of
-		-- path. (A fall below the course comes back through Respawned instead.)
-		if not ok and not run.finished and not run.respawning then
-			BotService.Wait(bot, 0.3)
-			local nodes = course.nodes
-			BotService.Race(bot, run, nearestNode(nodes, nodeAfterCheckpoint(nodes, run.checkpoint), bot.root.Position))
+		local first = fromNode or nodeAfterCheckpoint(nodes, run.checkpoint)
+		while true do
+			local ok, err = pcall(drive, first)
+			if ok then
+				return
+			elseif err ~= "bot interrupted" then
+				error(err, 0)
+			end
+			-- Knocked but landed: shake it off and carry on from the closest bit
+			-- of path. (A fall below the course comes back through Respawned.)
+			bot.onFrame = nil
+			if run.finished or run.respawning then
+				return
+			end
+			BotService.Recover(bot, 0.3)
+			first = nearestNode(nodes, nodeAfterCheckpoint(nodes, run.checkpoint), bot.root.Position)
 		end
 	end)
 end

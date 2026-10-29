@@ -226,8 +226,16 @@ function Tournament:SendHome(entrant, place)
 	self:Freeze({ entrant }, false)
 	local coins, xp = self:Reward(entrant, false)
 	if not entrant.left then
+		-- With no real players left the bots don't play it out, so there's nothing to watch
+		local others = false
+		for _, other in ipairs(self.entrants) do
+			if other.player and other.alive and not other.left and other ~= entrant then
+				others = true
+			end
+		end
 		Remotes.Announce:FireClient(player, "eliminated", {
 			tournament = self.id,
+			watchable = others,
 			place = place,
 			of = #self.entrants,
 			rounds = entrant.roundsSurvived or 0,

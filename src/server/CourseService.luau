@@ -429,6 +429,7 @@ end
 local function dropTile(tile)
 	tile.state = "shaking"
 	local part = tile.part
+	part:SetAttribute("Falling", true) -- bots keep off it
 	part.Color = part.Color:Lerp(Color3.new(1, 1, 1), 0.5)
 	local original = tile.color or part.Color
 	tile.color = tile.color or original
@@ -456,6 +457,7 @@ local function dropTile(tile)
 		part.Transparency = 0
 		part.CanCollide = true
 		part.Color = tile.color
+		part:SetAttribute("Falling", nil)
 		tile.state = "up"
 	end)
 end
