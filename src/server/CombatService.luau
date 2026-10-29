@@ -121,33 +121,60 @@ function CombatService.Launch(fighter, velocity, stun)
 	Remotes.Launch:FireClient(fighter.player, velocity, stun, spinAxis * random:NextNumber(4, 9))
 end
 
+-- The right shoulder joint and the axis that lifts the arm forward. Older rigs
+-- use a Motor6D (turn its C0); newer avatars an AnimationConstraint (turn the
+-- shoulder attachment on the torso instead).
+local function shoulder(model)
+	local joint, axis = nil, nil
+	local arm = model:FindFirstChild("RightUpperArm")
+	if arm and arm:FindFirstChild("RightShoulder") then
+		joint, axis = arm.RightShoulder, Vector3.xAxis
+	else
+		local torso = model:FindFirstChild("Torso")
+		if torso and torso:FindFirstChild("Right Shoulder") then
+			joint, axis = torso["Right Shoulder"], Vector3.zAxis
+		end
+	end
+	if not joint then
+		return nil
+	end
+	if joint:IsA("Motor6D") then
+		return joint, "C0", axis
+	elseif joint:IsA("AnimationConstraint") and joint.Attachment0 then
+		return joint.Attachment0, "CFrame", axis
+	end
+	return nil
+end
+
 -- Swings the right arm (and the hammer in that hand) up and down
 local function swing(fighter)
 	local model = modelOf(fighter)
-	local arm = model and model:FindFirstChild("RightUpperArm")
-	local joint = arm and arm:FindFirstChild("RightShoulder")
-	if not joint or not joint:IsA("Motor6D") then
+	local target, property, axis = nil, nil, nil
+	if model then
+		target, property, axis = shoulder(model)
+	end
+	if not target then
 		return
 	end
-	if fighter.shoulder ~= joint then
-		fighter.shoulder = joint
-		fighter.shoulderBase = joint.C0
+	if fighter.shoulder ~= target then
+		fighter.shoulder = target
+		fighter.shoulderBase = target[property]
 	end
 	local base = fighter.shoulderBase
 	local function at(degrees)
-		return base * CFrame.fromAxisAngle(Vector3.xAxis, math.rad(degrees))
+		return base * CFrame.fromAxisAngle(axis, math.rad(degrees))
 	end
 	fighter.swingToken = (fighter.swingToken or 0) + 1
 	local token = fighter.swingToken
-	TweenService:Create(joint, TweenInfo.new(0.07), { C0 = at(165) }):Play()
+	TweenService:Create(target, TweenInfo.new(0.07), { [property] = at(165) }):Play()
 	task.delay(0.07, function()
-		if fighter.swingToken ~= token or not joint.Parent then
+		if fighter.swingToken ~= token or not target.Parent then
 			return
 		end
-		TweenService:Create(joint, TweenInfo.new(0.07), { C0 = at(55) }):Play()
+		TweenService:Create(target, TweenInfo.new(0.07), { [property] = at(55) }):Play()
 		task.delay(0.22, function()
-			if fighter.swingToken == token and joint.Parent then
-				TweenService:Create(joint, TweenInfo.new(0.2), { C0 = base }):Play()
+			if fighter.swingToken == token and target.Parent then
+				TweenService:Create(target, TweenInfo.new(0.2), { [property] = base }):Play()
 			end
 		end)
 	end)
