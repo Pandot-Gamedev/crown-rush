@@ -3,6 +3,7 @@
 -- A few effects come straight from this player's own movement (bounces, hits).
 
 local Debris = game:GetService("Debris")
+local SoundService = game:GetService("SoundService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
@@ -49,12 +50,13 @@ function Effects.Sound(name, position)
 	if not info then
 		return
 	end
-	local holder = anchor(position)
 	local sound = Instance.new("Sound")
 	sound.SoundId = info[1]
 	sound.Volume = info[2]
 	sound.RollOffMaxDistance = 200
-	sound.Parent = holder
+	-- No position: a screen sound everyone hears at full volume
+	local holder = position and anchor(position) or sound
+	sound.Parent = position and holder or SoundService
 	sound:Play()
 	Debris:AddItem(holder, 3)
 end

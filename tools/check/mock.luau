@@ -11,6 +11,8 @@ local roblox = require("@lune/roblox")
 local task = require("@lune/task")
 
 local Mock = {}
+Mock.Sent = {}
+Mock.Warnings = {}
 
 local CFrame = roblox.CFrame
 local Vector3 = roblox.Vector3
@@ -31,10 +33,21 @@ local function signal()
 		}
 	end
 	s.Once = s.Connect
-	function s:Wait() end
+	local waiting = {}
+	function s:Wait()
+		table.insert(waiting, coroutine.running())
+		return coroutine.yield()
+	end
 	function s:Fire(...)
-		for _, fn in ipairs(handlers) do
+		for _, fn in ipairs(table.clone(handlers)) do
 			fn(...)
+		end
+		local threads = waiting
+		waiting = {}
+		for _, thread in ipairs(threads) do
+			if coroutine.status(thread) == "suspended" then
+				task.spawn(thread, ...)
+			end
 		end
 	end
 	return s
@@ -91,11 +104,27 @@ function Inst.new(className, parent)
 		props.AssemblyLinearVelocity = Vector3.zero
 		props.AssemblyAngularVelocity = Vector3.zero
 	end
+	if className == "Humanoid" then
+		props.Health = 100
+		props.WalkSpeed = 16
+		props.SetStateEnabled = function() end
+		props.ChangeState = function() end
+		props.MoveTo = function() end
+	end
 	if className == "RemoteEvent" then
 		props.OnServerEvent = signal()
 		props.OnClientEvent = signal()
-		props.FireClient = function() end
-		props.FireAllClients = function() end
+		-- What the server sent to players: Mock.Sent[remoteName] = { {player, ...}, ... }
+		props.FireClient = function(self, player, ...)
+			local name = rawget(self, "_props").Name
+			Mock.Sent[name] = Mock.Sent[name] or {}
+			table.insert(Mock.Sent[name], table.pack(player, ...))
+		end
+		props.FireAllClients = function(self, ...)
+			local name = rawget(self, "_props").Name
+			Mock.Sent[name] = Mock.Sent[name] or {}
+			table.insert(Mock.Sent[name], table.pack("all", ...))
+		end
 		props.FireServer = function() end
 	elseif className == "RemoteFunction" then
 		props.InvokeServer = function() end
@@ -133,7 +162,7 @@ mt.__index = function(self, key)
 		return rawget(self, "_parent")
 	elseif key == "Position" and props.CFrame then
 		return props.CFrame.Position
-	elseif key == "Destroying" or key == "AncestryChanged" or key == "Changed" then
+	elseif key == "Destroying" or key == "AncestryChanged" or key == "Changed" or key == "DescendantAdded" then
 		local list = rawget(self, "_signals")
 		list[key] = list[key] or signal()
 		return list[key]
@@ -418,6 +447,21 @@ local clock = 1000
 
 local SERVICES = {}
 
+-- The parts rays can hit, gathered once per clock tick
+local rayCache, rayClock = nil, nil
+local function rayParts(workspace)
+	if rayClock ~= clock or not rayCache then
+		rayCache = {}
+		for _, item in ipairs(workspace:GetDescendants()) do
+			if item:IsA("BasePart") then
+				table.insert(rayCache, item)
+			end
+		end
+		rayClock = clock
+	end
+	return rayCache
+end
+
 local function service(name, extra)
 	local s = Inst.new(name)
 	s.Name = name
@@ -434,8 +478,62 @@ service("Workspace", {
 	GetServerTimeNow = function()
 		return clock
 	end,
-	Raycast = function()
-		return nil
+	-- Rays against every part as a box (good enough for floors and walls)
+	Raycast = function(self, origin, direction, params)
+		params = params or {}
+		local parts = rayParts(self)
+		local excluded = {}
+		for _, item in ipairs(params.FilterDescendantsInstances or {}) do
+			excluded[item] = true
+		end
+		local best, bestT = nil, 1
+		for _, part in ipairs(parts) do
+			local props = rawget(part, "_props")
+			local skip = props.CanQuery == false
+				or (params.RespectCanCollide and props.CanCollide == false)
+				or (params.CollisionGroup == "Runners" and props.CollisionGroup == "Runners")
+			if not skip then
+				local item = part
+				while item and not skip do
+					skip = excluded[item] == true
+					item = rawget(item, "_props").Parent
+				end
+			end
+			if not skip then
+				local cf, size = props.CFrame, props.Size
+				local o = cf:PointToObjectSpace(origin)
+				local d = cf:VectorToObjectSpace(direction)
+				local half = size / 2
+				local tMin, tMax = 0, bestT
+				for _, axis in ipairs({ "X", "Y", "Z" }) do
+					local oa, da, h = o[axis], d[axis], half[axis]
+					if math.abs(da) < 1e-9 then
+						if oa < -h or oa > h then
+							tMin, tMax = 1, 0
+						end
+					else
+						local t1, t2 = (-h - oa) / da, (h - oa) / da
+						if t1 > t2 then
+							t1, t2 = t2, t1
+						end
+						tMin, tMax = math.max(tMin, t1), math.min(tMax, t2)
+					end
+				end
+				if tMin <= tMax and tMin < bestT then
+					best, bestT = part, tMin
+				end
+			end
+		end
+		if not best then
+			return nil
+		end
+		local position = origin + direction * bestT
+		return {
+			Instance = best,
+			Position = position,
+			Distance = (direction * bestT).Magnitude,
+			Normal = Vector3.new(0, 1, 0),
+		}
 	end,
 })
 service("ReplicatedStorage")
@@ -619,6 +717,11 @@ service("DataStoreService", {
 	end,
 })
 
+service("PhysicsService", {
+	RegisterCollisionGroup = function() end,
+	CollisionGroupSetCollidable = function() end,
+})
+
 function methods:GetService(name)
 	return SERVICES[name] or service(name)
 end
@@ -661,6 +764,15 @@ local function requireMock(module)
 end
 
 env = {
+	warn = function(...)
+		local parts = {}
+		for i = 1, select("#", ...) do
+			parts[i] = tostring((select(i, ...)))
+		end
+		local text = table.concat(parts, " ")
+		table.insert(Mock.Warnings, text)
+		print("WARN: " .. text)
+	end,
 	game = game,
 	workspace = SERVICES.Workspace,
 	require = requireMock,

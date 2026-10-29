@@ -37,3 +37,6 @@ outside Roblox with a small stand-in for Roblox (`tools/check/mock.luau`):
 - `lune run tools/check/server.luau` starts the whole server.
 - `lune run tools/check/play.luau` plays the first world and the Daily
   Challenge with a pretend player and checks the save.
+- `lune run tools/check/tournament.luau` plays a whole tournament: two pretend
+  players and 10 bots, every round to the crown. Force the first rounds with
+  `ROUNDS=door_dash,tile_fall,sweeper`.

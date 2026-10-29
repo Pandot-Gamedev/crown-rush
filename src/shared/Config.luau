@@ -43,6 +43,10 @@ Config.VipCoinBonus = 0.25
 Config.DailyChallengeCoins = 150 -- first finish of the Daily Challenge each day
 Config.DailyChallengeXp = 120
 
+-- Tournament pay: everyone who plays gets "play", plus "round" for every round
+-- survived, plus "win" for the crown. Same for XP.
+Config.TournamentRewards = { play = 15, round = 20, win = 150, playXp = 20, roundXp = 25, winXp = 150 }
+
 -- Daily login reward: DailyRewardBase * streak day (streak capped at 7)
 Config.DailyRewardBase = 50
 Config.DailyStreakCap = 7

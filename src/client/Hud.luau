@@ -136,7 +136,7 @@ function Hud.Init(screenGui)
 	end)
 
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or RunHud.IsOnCourse() then
+		if processed or RunHud.IsOnCourse() or player:GetAttribute("InTournament") then
 			return
 		end
 		local panel = shortcuts[input.KeyCode]

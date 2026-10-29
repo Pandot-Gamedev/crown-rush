@@ -366,7 +366,7 @@ local function check(courseData)
 		end
 	end
 
-	if #course.gems ~= 3 then
+	if #course.gems ~= 3 and not courseData.race then
 		table.insert(problems, string.format("%d gems (needs 3)", #course.gems))
 	end
 	for index, gem in ipairs(course.gems) do
@@ -439,7 +439,15 @@ end
 local only = process.args[1]
 local failed = 0
 local total = 0
-for _, courseData in ipairs(Courses.List) do
+-- Adventure courses, then the tournament's race courses
+local Rounds = Mock.require(Shared.Rounds)
+local all = table.clone(Courses.List)
+for _, round in ipairs(Rounds.List) do
+	if round.pieces then
+		table.insert(all, { id = round.id, name = round.name, world = round.world, pieces = round.pieces, race = true })
+	end
+end
+for _, courseData in ipairs(all) do
 	if not only or courseData.id == only or courseData.world == only then
 		total += 1
 		local ok, problems, notes, info = pcall(check, courseData)

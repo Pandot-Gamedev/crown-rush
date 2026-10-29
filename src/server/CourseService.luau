@@ -20,8 +20,8 @@ local CourseBuilder = require(script.Parent.CourseBuilder)
 
 local CourseService = {}
 
-local SLOT_ORIGIN = Vector3.new(4000, 300, 0)
-local SLOT_SPACING = 1400
+local SLOT_ORIGIN = Vector3.new(3000, 300, 0)
+local SLOT_SPACING = 1300 -- courses sit in a 4 x 4 grid, far enough apart that none overlap
 local GEM_RADIUS = 4.5
 local TRAIL_STEP = 0.1 -- seconds between saved spots on a ghost path
 local TRAIL_MAX = 6000 -- numbers kept (about 2.5 minutes of running)
@@ -58,7 +58,8 @@ function CourseService.Open(courseData, key, themeId)
 	if not slot then
 		return nil, "The game is busy, try again in a moment"
 	end
-	local origin = CFrame.new(SLOT_ORIGIN + Vector3.new((slot - 1) * SLOT_SPACING, 0, 0))
+	local column, row = (slot - 1) % 4, math.floor((slot - 1) / 4)
+	local origin = CFrame.new(SLOT_ORIGIN + Vector3.new(column * SLOT_SPACING, 0, row * SLOT_SPACING))
 	local course = CourseBuilder.Build(courseData, origin, folder, themeId)
 	local instance = {
 		key = key,
@@ -134,6 +135,7 @@ local function summary(run)
 		skipped = run.skipped,
 		par = course.par,
 		finished = run.finished,
+		time = run.finished and run.time or nil,
 		origin = course.origin,
 	}
 end

@@ -18,6 +18,7 @@ local CourseService = require(script.CourseService)
 local TrialService = require(script.TrialService)
 local AdventureService = require(script.AdventureService)
 local WorldService = require(script.WorldService)
+local TournamentService = require(script.TournamentService)
 
 -- Players' screens can't check who owns a private server, so share it
 if game.PrivateServerId ~= "" then
@@ -42,6 +43,7 @@ CourseService.Start()
 TrialService.Start()
 AdventureService.Start(lobbySpawn)
 WorldService.Start(lobbySpawn)
+TournamentService.Start(lobbySpawn)
 DataService.Start()
 
 -- Test helpers for Roblox Studio only (never in the live game). In the command

@@ -100,6 +100,13 @@ local function addMover(part)
 	if part:IsA("BasePart") then
 		movers[part] =
 			{ spec = Motion.Read(part), transparency = part.Transparency, collide = part.CanCollide, state = "solid" }
+		-- Some obstacles change mid-round (sweepers speeding up, lava starting)
+		part.AttributeChanged:Connect(function()
+			local info = movers[part]
+			if info then
+				info.spec = Motion.Read(part)
+			end
+		end)
 	end
 end
 

@@ -242,6 +242,9 @@ function ProgressService.Start()
 		end
 	end)
 
+	-- These would pull a player off a tournament round, so they wait
+	local COURSE_ACTIONS =
+		{ PlayCourse = true, LeaveCourse = true, RetryCourse = true, SkipSection = true, PlayDaily = true }
 	Remotes.Action.OnServerInvoke = function(player, actionName, argument)
 		local action = actions[actionName]
 		if type(actionName) ~= "string" or not action then
@@ -249,6 +252,9 @@ function ProgressService.Start()
 		end
 		if argument ~= nil and type(argument) ~= "string" then
 			return false, "Bad request"
+		end
+		if COURSE_ACTIONS[actionName] and player:GetAttribute("InTournament") then
+			return false, "Finish your tournament first (or leave it)"
 		end
 		local ok, success, message = pcall(action, player, argument)
 		if not ok then

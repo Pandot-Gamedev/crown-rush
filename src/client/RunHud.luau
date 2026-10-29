@@ -139,7 +139,8 @@ end
 
 ------------------------------------------------------------------ The bar
 local function refreshBar()
-	bar.Visible = run ~= nil
+	-- In a tournament race the round bar (TournamentHud) takes the top spot
+	bar.Visible = run ~= nil and run.mode ~= "race"
 	buttons.Visible = run ~= nil and not resultCard.Visible
 	if not run then
 		return
@@ -156,6 +157,8 @@ local function refreshBar()
 	gemLabels[1].Parent.Visible = run.mode == "adventure"
 	skipButton.Visible = run.canSkip == true and not run.skipped
 	ghostButton.Visible = run.mode == "adventure"
+	-- In a tournament the tournament screen has its own Leave button
+	buttons.Visible = buttons.Visible and run.mode ~= "race"
 	Movement.SetGems({
 		run.gems[1] or run.savedGems[1],
 		run.gems[2] or run.savedGems[2],
@@ -500,7 +503,7 @@ function RunHud.Init(screenGui)
 			if run then
 				local finalTime = run.finalTime
 				run = info
-				run.finalTime = info.finished and finalTime or nil
+				run.finalTime = info.finished and (finalTime or info.time) or nil
 			else
 				run = info
 			end
