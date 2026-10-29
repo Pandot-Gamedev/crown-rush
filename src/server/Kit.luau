@@ -395,8 +395,8 @@ B.gaps = function(pc, o)
 	pc:Floor(0, endY, z + 3, w, 6)
 	pc:Jump(lastX * 0.5, endY, z + 3)
 	if o.gem then
-		pc:Floor(w / 2 + 8, endY, z - size / 2 - gap, 5, 5, { Color = pc.theme.accent })
-		pc:Gem(w / 2 + 8, endY, z - size / 2 - gap)
+		pc:Floor(w / 2 + (o.gemOut or 6), endY, z - size / 2 - gap, 5, 5, { Color = pc.theme.accent })
+		pc:Gem(w / 2 + (o.gemOut or 6), endY, z - size / 2 - gap)
 	end
 	return pc:Done(z + 6, endY)
 end
