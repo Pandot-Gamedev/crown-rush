@@ -1,5 +1,7 @@
--- Creates the Bonk Arena game pass and developer products through Roblox Open
+-- Creates the Crown Rush game pass and developer products through Roblox Open
 -- Cloud, with their prices and icons, so nobody has to make them by hand.
+-- The products are every Robux cosmetic in src/shared/Cosmetics.luau, and the
+-- icons come from store/ (drawn by tools/make_store_art.py).
 --
 -- One-time setup:
 --   1. Creator Hub > Open Cloud > API Keys > Create API Key, with write access to
@@ -17,46 +19,74 @@
 
 local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
+local Cosmetics = require(game:GetService("ReplicatedStorage").Shared.Cosmetics)
+local Shop = require(game:GetService("ReplicatedStorage").Shared.Shop)
 
-local UNIVERSE = 10773598334
--- The VIP pass was created on 2026-10-29 (2060495027), so this stays false.
-local MAKE_PASSES = false
-local ICONS = "https://raw.githubusercontent.com/Pandot-Gamedev/bonk-arena/refs/heads/claude/project-thread-x8udij/store/"
+local UNIVERSE = 0
+local MAKE_PASSES = true
+local ICONS =
+	"https://raw.githubusercontent.com/Pandot-Gamedev/crown-rush/refs/heads/claude/project-thread-5pvzuk/store/"
 local key = HttpService:GetSecret("ShopKey")
 
-local PASSES = {
-	{ "VIP", 250, "Golden name tag, a crown, the Royal Hammer and +25% coins. Coins only buy looks, never power.", "pass_vip.png" },
+local PASSES = {}
+for _, pass in ipairs(Shop.Passes) do
+	table.insert(
+		PASSES,
+		{ pass.name, pass.suggestedPrice, pass.description, "pass_" .. string.lower(pass.id) .. ".png" }
+	)
+end
+
+-- What each kind of cosmetic does, for the product descriptions
+local WHAT = {
+	trail = "A %s trail behind you as you run. Looks only.",
+	celebrate = "%s when you cross a finish line or qualify. Looks only.",
+	hammer = "The %s for fight rounds. Looks only, every hammer hits the same.",
+	title = 'Shows "%s" above your head.',
 }
-local PRODUCTS = {
-	{ "Galaxy Hammer", 149, "A swirling galaxy look for your hammer. Looks only.", "product_hammer_galaxy.png", "hammer_galaxy" },
-	{ "Rubber Chicken", 129, "Bonk with a squeaky rubber chicken. Looks only.", "product_hammer_chicken.png", "hammer_chicken" },
-	{ "Golden Hammer", 99, "A shiny gold look for your hammer. Looks only.", "product_hammer_golden.png", "hammer_golden" },
-	{ "Neon Hammer", 75, "A glowing neon look for your hammer. Looks only.", "product_hammer_neon.png", "hammer_neon" },
-	{ "Big Fish", 49, "Bonk with a big floppy fish. Looks only.", "product_hammer_fish.png", "hammer_fish" },
-	{ "Lightning Strike KO", 129, "Lightning strikes where you knock someone out. Looks only.", "product_ko_lightning.png", "ko_lightning" },
-	{ "Fireworks KO", 99, "Fireworks go off where you knock someone out. Looks only.", "product_ko_fireworks.png", "ko_fireworks" },
-	{ "Cartoon Star KO", 75, "A cartoon star pops where you knock someone out. Looks only.", "product_ko_star.png", "ko_star" },
-	{ "Confetti Blast KO", 49, "Confetti bursts where you knock someone out. Looks only.", "product_ko_confetti.png", "ko_confetti" },
-	{ "Helicopter Dance", 99, "Spin your hammer like a helicopter when you win. Looks only.", "product_dance_heli.png", "dance_heli" },
-	{ "Backflip Dance", 75, "Do a backflip on the podium when you win. Looks only.", "product_dance_flip.png", "dance_flip" },
-	{ "Bunny Hop Dance", 49, "Hop around the podium when you win. Looks only.", "product_dance_hop.png", "dance_hop" },
-	{ "Spin Dance", 25, "Spin on the podium when you win. Looks only.", "product_dance_spin.png", "dance_spin" },
-	{ "Title: Bonk Master", 99, "Shows \"Bonk Master\" above your head.", "product_title_bonkmaster.png", "title_bonkmaster" },
-	{ "Title: Unbonkable", 49, "Shows \"Unbonkable\" above your head.", "product_title_unbonkable.png", "title_unbonkable" },
-	{ "Title: Hammer Time", 25, "Shows \"Hammer Time\" above your head.", "product_title_hammertime.png", "title_hammertime" },
-}
+local PRODUCTS = {}
+for _, item in ipairs(Cosmetics.List) do
+	if item.source == "robux" then
+		local kind = item.kind
+		local name = kind == "title" and ("Title: " .. item.text) or item.name
+		table.insert(PRODUCTS, {
+			name,
+			item.suggestedPrice,
+			string.format(WHAT[kind] or "%s. Looks only.", kind == "title" and item.text or item.name),
+			"product_" .. item.id .. ".png",
+			item.id,
+		})
+	end
+end
 
 assert(UNIVERSE ~= 0, "Set UNIVERSE to game.GameId first")
 
 -- A multipart/form-data body with text fields and one PNG file
 local function form(fields, fileField, fileName, png)
-	local boundary = "BonkArena" .. HttpService:GenerateGUID(false):gsub("-", "")
+	local boundary = "CrownRush" .. HttpService:GenerateGUID(false):gsub("-", "")
 	local parts = {}
 	for _, field in ipairs(fields) do
-		table.insert(parts, string.format("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n", boundary, field[1], tostring(field[2])))
+		table.insert(
+			parts,
+			string.format(
+				'--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n',
+				boundary,
+				field[1],
+				tostring(field[2])
+			)
+		)
 	end
 	if png then
-		table.insert(parts, string.format("--%s\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: image/png\r\n\r\n", boundary, fileField, fileName) .. png .. "\r\n")
+		table.insert(
+			parts,
+			string.format(
+				'--%s\r\nContent-Disposition: form-data; name="%s"; filename="%s"\r\nContent-Type: image/png\r\n\r\n',
+				boundary,
+				fileField,
+				fileName
+			)
+				.. png
+				.. "\r\n"
+		)
 	end
 	table.insert(parts, "--" .. boundary .. "--\r\n")
 	return table.concat(parts), "multipart/form-data; boundary=" .. boundary
@@ -109,7 +139,8 @@ if MAKE_PASSES then
 			{ "price", pass[2] },
 			{ "isRegionalPricingEnabled", "true" },
 		}, "imageFile", pass[4], icon(pass[4]))
-		local result, problem = post(string.format("/game-passes/v1/universes/%d/game-passes", UNIVERSE), body, contentType)
+		local result, problem =
+			post(string.format("/game-passes/v1/universes/%d/game-passes", UNIVERSE), body, contentType)
 		if result then
 			print("ITEM pass", pass[1], result.gamePassId or result.id or HttpService:JSONEncode(result))
 		else
@@ -130,7 +161,8 @@ for _, product in ipairs(PRODUCTS) do
 			{ "price", product[2] },
 			{ "isRegionalPricingEnabled", "true" },
 		}, "imageFile", product[4], icon(product[4]))
-		local result, problem = post(string.format("/developer-products/v2/universes/%d/developer-products", UNIVERSE), body, contentType)
+		local result, problem =
+			post(string.format("/developer-products/v2/universes/%d/developer-products", UNIVERSE), body, contentType)
 		if result then
 			print("ITEM product", product[5], result.productId or result.id or HttpService:JSONEncode(result))
 		else

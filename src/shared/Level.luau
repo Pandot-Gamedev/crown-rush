@@ -4,7 +4,7 @@
 
 local Level = {}
 
-Level.CoinsPerLevel = 25 -- reward for reaching level N is N * this
+Level.CoinsPerLevel = 10 -- reward for reaching level N is N * this
 Level.Max = 50
 
 -- Total XP needed to reach a level (level 1 needs 0)

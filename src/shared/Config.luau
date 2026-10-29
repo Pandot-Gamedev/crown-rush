@@ -37,7 +37,10 @@ Config.CourseSlots = 16 -- how many courses can be built at once on one server
 Config.MinTimeShare = 0.35 -- a finish faster than this share of par is ignored (cheating or a bug)
 
 -- Rewards. Coins only buy cosmetics, so they never help you win.
-Config.CourseRewards = { finish = 25, firstFinish = 60, star = 40, gem = 15 }
+-- Balance: a perfect first run of a course pays about 155 coins, a replay 10,
+-- a tournament 15 to 245. Every coin cosmetic together costs about 22,000
+-- coins, so collecting them all takes 20+ hours of play.
+Config.CourseRewards = { finish = 10, firstFinish = 40, star = 25, gem = 10 }
 Config.CourseXp = { finish = 40, firstFinish = 80, star = 30, gem = 10 }
 Config.VipCoinBonus = 0.25
 Config.DailyChallengeCoins = 150 -- first finish of the Daily Challenge each day

@@ -40,3 +40,12 @@ outside Roblox with a small stand-in for Roblox (`tools/check/mock.luau`):
 - `lune run tools/check/tournament.luau` plays a whole tournament: two pretend
   players and 10 bots, every round to the crown. Force the first rounds with
   `ROUNDS=door_dash,tile_fall,sweeper`.
+
+## Store art and the shop
+
+- `python3 tools/make_store_art.py` draws the game icon, three thumbnails, the
+  VIP pass icon and an icon for every Robux cosmetic into `store/`.
+- `tools/create_shop_items.luau` creates the VIP pass and the developer
+  products (every `source = "robux"` item in `src/shared/Cosmetics.luau`) with
+  those icons through Open Cloud. Instructions are at the top of the file.
+  Paste the ids it prints into `src/shared/Shop.luau` and `src/shared/Cosmetics.luau`.

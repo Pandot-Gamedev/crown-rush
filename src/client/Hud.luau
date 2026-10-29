@@ -12,6 +12,7 @@ local Courses = require(Shared.Courses)
 
 local UI = require(script.Parent.UI)
 local State = require(script.Parent.State)
+local Notifications = require(script.Parent.Notifications)
 local Panels = require(script.Parent.Panels)
 local RunHud = require(script.Parent.RunHud)
 local T = UI.Theme
@@ -97,6 +98,22 @@ function Hud.Init(screenGui)
 		"Step off the pad to leave the queue",
 		{ Size = UDim2.new(1, 0, 0, 16), Font = T.BodyFont, TextColor3 = T.Muted, Parent = queueBanner }
 	)
+	-- Private server owners can start right away (bots fill the empty spots)
+	local startNow = UI.button("Start now", T.Good, function()
+		local ok, message = State.Action("StartNow")
+		if not ok and message then
+			Notifications.Show(message, "warning")
+		end
+	end, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 76),
+		Size = UDim2.fromOffset(160, 40),
+		Visible = false,
+		Parent = screenGui,
+	})
+	local function isOwner()
+		return ReplicatedStorage:GetAttribute("PrivateServerOwnerId") == player.UserId
+	end
 
 	-- Menu buttons, left side under the stats, with keyboard shortcuts
 	local menu = UI.new("Frame", {
@@ -128,6 +145,7 @@ function Hud.Init(screenGui)
 			menu.Visible = not busy
 			local pad = player:GetAttribute("QueuePad")
 			queueBanner.Visible = pad ~= nil and not busy
+			startNow.Visible = queueBanner.Visible and isOwner()
 			if pad then
 				queueLine.Text = ReplicatedStorage:GetAttribute("PadStatus" .. pad) or "Waiting..."
 			end

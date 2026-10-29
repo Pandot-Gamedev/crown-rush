@@ -601,6 +601,18 @@ function TournamentService.Start(lobbySpawnFn)
 		return leave(player, false)
 	end)
 	ProgressService.AddAction("Spectate", spectate)
+	-- Private servers: the owner can start the tournament on their pad right away
+	ProgressService.AddAction("StartNow", function(player)
+		if game.PrivateServerId == "" or game.PrivateServerOwnerId ~= player.UserId then
+			return false, "Only the owner of a private server can do that"
+		end
+		local pad = pads[player:GetAttribute("QueuePad") or 0]
+		if not pad or not table.find(pad.queue, player) then
+			return false, "Stand on a tournament pad first"
+		end
+		pad.countdownEnd = os.clock()
+		return true
+	end)
 	Players.PlayerRemoving:Connect(function(player)
 		leave(player, true)
 		watchIndex[player] = nil

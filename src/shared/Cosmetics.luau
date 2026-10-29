@@ -32,7 +32,7 @@ Cosmetics.List = {
 		kind = "trail",
 		name = "Bubble Trail",
 		source = "coins",
-		price = 500,
+		price = 800,
 		colors = { rgb(150, 220, 255), rgb(255, 255, 255) },
 	},
 	{
@@ -40,7 +40,7 @@ Cosmetics.List = {
 		kind = "trail",
 		name = "Leaf Trail",
 		source = "coins",
-		price = 900,
+		price = 1600,
 		colors = { rgb(110, 200, 90), rgb(220, 240, 120) },
 	},
 	{
@@ -48,7 +48,7 @@ Cosmetics.List = {
 		kind = "trail",
 		name = "Sparkle Trail",
 		source = "coins",
-		price = 1500,
+		price = 3000,
 		colors = { rgb(0, 170, 255), rgb(0, 255, 200) },
 	},
 	{
@@ -134,7 +134,7 @@ Cosmetics.List = {
 		kind = "celebrate",
 		name = "Bubbles",
 		source = "coins",
-		price = 600,
+		price = 1200,
 		colors = { rgb(120, 220, 255), rgb(255, 255, 255) },
 	},
 	{
@@ -198,7 +198,7 @@ Cosmetics.List = {
 		kind = "hammer",
 		name = "Blue Foam Hammer",
 		source = "coins",
-		price = 400,
+		price = 800,
 		shape = "hammer",
 		head = rgb(60, 140, 255),
 		handle = rgb(240, 240, 240),
@@ -209,7 +209,7 @@ Cosmetics.List = {
 		kind = "hammer",
 		name = "Wooden Mallet",
 		source = "coins",
-		price = 900,
+		price = 2000,
 		shape = "mallet",
 		head = rgb(170, 120, 70),
 		handle = rgb(120, 80, 45),
@@ -398,9 +398,9 @@ Cosmetics.List = {
 	-- Crown dances (when you win a tournament)
 	{ id = "dance_cheer", kind = "dance", name = "Cheer", source = "default" },
 	{ id = "dance_jump", kind = "dance", name = "Victory Jump", source = "level", level = 20 },
-	{ id = "dance_spin", kind = "dance", name = "Spin", source = "coins", price = 1200 },
-	{ id = "dance_hop", kind = "dance", name = "Bunny Hop", source = "coins", price = 1800 },
-	{ id = "dance_flip", kind = "dance", name = "Backflip", source = "coins", price = 2500 },
+	{ id = "dance_spin", kind = "dance", name = "Spin", source = "coins", price = 2500 },
+	{ id = "dance_hop", kind = "dance", name = "Bunny Hop", source = "coins", price = 4000 },
+	{ id = "dance_flip", kind = "dance", name = "Backflip", source = "coins", price = 6000 },
 	{ id = "dance_heli", kind = "dance", name = "Helicopter", source = "earned", rule = "crowns", amount = 10 },
 }
 

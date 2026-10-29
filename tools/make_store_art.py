@@ -1,4 +1,4 @@
-"""Draws the Roblox store art for Bonk Arena into store/:
+"""Draws the Roblox store art for Crown Rush into store/:
 game icon, thumbnails, the VIP pass icon and developer product icons.
 
 Usage: python3 tools/make_store_art.py
@@ -19,12 +19,15 @@ GOLD = (255, 200, 40)
 NAVY = (20, 32, 52)
 SKY_TOP, SKY_BOTTOM = (90, 170, 255), (190, 230, 255)
 FOAM_RED, FOAM_YELLOW = (235, 60, 60), (255, 210, 60)
-ARENAS = {
-    "ice": (150, 220, 255),
-    "spin": (255, 170, 60),
-    "lava": (255, 90, 40),
-    "bounce": (255, 110, 200),
+# The five Adventure worlds (floor colour, accent), as in src/shared/Worlds.luau
+WORLDS = {
+    "candy": ("CANDY CLOUDS", (255, 170, 210), (255, 105, 170)),
+    "jungle": ("JUNGLE RUINS", (120, 160, 90), (250, 200, 80)),
+    "frost": ("FROST PEAK", (175, 220, 250), (110, 170, 220)),
+    "lava": ("LAVA FACTORY", (95, 95, 105), (255, 150, 40)),
+    "space": ("STAR STATION", (70, 60, 120), (90, 255, 230)),
 }
+SHIRTS = [(230, 60, 60), (60, 140, 255), (90, 200, 90), (255, 170, 40), (200, 90, 255), (40, 200, 200)]
 
 
 def font(path, size):
@@ -126,7 +129,10 @@ def brawler(size, shirt=(60, 140, 255), pants=(40, 50, 90), pose="stand", face="
     skin = (255, 205, 150)
     outline = (40, 30, 30)
     w = max(2, int(s * 0.01))
-    if pose == "fly":
+    if pose == "run":
+        d.polygon([(cx - u * 0.45, ground - u * 2), (cx - u * 0.05, ground - u * 2), (cx - u * 0.7, ground - u * 0.1), (cx - u * 1.1, ground - u * 0.3)], fill=pants, outline=outline)
+        d.polygon([(cx + u * 0.05, ground - u * 2), (cx + u * 0.45, ground - u * 2), (cx + u * 0.9, ground - u * 0.6), (cx + u * 0.6, ground - u * 0.3)], fill=pants, outline=outline)
+    elif pose == "fly":
         d.polygon([(cx - u * 0.45, ground - u * 2), (cx - u * 0.05, ground - u * 2), (cx - u * 0.9, ground - u * 0.2), (cx - u * 1.3, ground - u * 0.5)], fill=pants, outline=outline)
         d.polygon([(cx + u * 0.05, ground - u * 2), (cx + u * 0.45, ground - u * 2), (cx + u * 1.3, ground - u * 0.5), (cx + u * 0.9, ground - u * 0.2)], fill=pants, outline=outline)
     else:
@@ -138,6 +144,7 @@ def brawler(size, shirt=(60, 140, 255), pants=(40, 50, 90), pose="stand", face="
         "swing": ((-0.95, -4, -0.55, -2.2), (0.55, -5.6, 0.95, -3.8)),
         "fly": ((-0.95, -5.6, -0.55, -3.8), (0.55, -5.6, 0.95, -3.8)),
         "cheer": ((-0.95, -5.8, -0.55, -4), (0.55, -5.8, 0.95, -4)),
+        "run": ((-1.1, -4.2, -0.7, -2.6), (0.6, -4.6, 1.0, -3.0)),
     }[pose]
     for x0, y0, x1, y1 in arms:
         d.rectangle([cx + u * x0, ground + u * y0, cx + u * x1, ground + u * y1], fill=skin, outline=outline, width=w)
@@ -191,66 +198,6 @@ def motion_lines(d, x, y, length, angle, color=(255, 255, 255), count=3, spacing
         d.line([sx, sy, sx - math.cos(a) * length, sy - math.sin(a) * length], fill=color, width=width)
 
 
-def scene(size, title=True, tagline=None):
-    """A floating arena in the sky: one brawler bonks another off the edge."""
-    w, h = size
-    img = gradient(size, SKY_TOP, SKY_BOTTOM).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    d.ellipse([w * 0.83, h * 0.05, w * 0.83 + h * 0.15, h * 0.2], fill=(255, 240, 150))
-    for cx, cy, r in ((0.1, 0.62, 0.06), (0.9, 0.7, 0.07), (0.22, 0.9, 0.05), (0.7, 0.93, 0.06)):
-        cloud(d, w * cx, h * cy, h * r)
-    # far arenas
-    island(d, w * 0.1, h * 0.46, w * 0.07, ARENAS["ice"])
-    island(d, w * 0.92, h * 0.66, w * 0.055, ARENAS["bounce"])
-    # main arena
-    top = h * 0.72
-    island(d, w * 0.47, top, w * 0.3, ARENAS["spin"], depth=h * 0.26)
-    d = ImageDraw.Draw(img)
-    for i in range(8):
-        a = math.pi * 2 / 8 * i
-        d.line([w * 0.47, top, w * 0.47 + math.cos(a) * w * 0.27, top + math.sin(a) * w * 0.04], fill=shade(ARENAS["spin"], -25), width=4)
-    # the hitter and the flying victim
-    paste_center(img, brawler(h * 0.4, shirt=(230, 60, 60), pose="swing"), w * 0.38, top - h * 0.19)
-    paste_center(img, hammer(h * 0.36, angle=-75), w * 0.47, top - h * 0.3)
-    paste_center(img, brawler(h * 0.32, shirt=(60, 140, 255), pose="fly", face="dizzy").rotate(-35, resample=Image.BICUBIC, expand=True), w * 0.78, top - h * 0.31)
-    d = ImageDraw.Draw(img)
-    motion_lines(d, w * 0.7, top - h * 0.24, w * 0.08, 200, count=3, spacing=h * 0.03, width=max(4, int(h * 0.008)))
-    paste_center(img, burst(h * 0.26), w * 0.59, top - h * 0.28)
-    d = ImageDraw.Draw(img)
-    outlined_text(d, (w * 0.89, top - h * 0.48), "142%", font(FONT_BOLD, int(h * 0.075)), (255, 70, 50), outline=(255, 255, 255), width=max(3, int(h * 0.006)))
-    # a third brawler waiting their turn
-    paste_center(img, brawler(h * 0.26, shirt=(90, 200, 90), pose="cheer"), w * 0.22, top - h * 0.12)
-    d = ImageDraw.Draw(img)
-    if title:
-        outlined_text(d, (w * 0.5, h * 0.12), "BONK ARENA", font(FONT_BOLD, int(h * 0.13)), (255, 215, 60), outline=(120, 20, 20), width=max(4, int(h * 0.012)))
-    if tagline:
-        d.rounded_rectangle([w * 0.08, h * 0.86, w * 0.92, h * 0.95], radius=int(h * 0.03), fill=(20, 20, 40, 200))
-        outlined_text(d, (w * 0.5, h * 0.905), tagline, font(FONT_SEMI, int(h * 0.045)), (255, 255, 255), width=max(2, int(h * 0.004)))
-    return img
-
-
-def icon_art(s):
-    """The square game icon: a giant foam hammer bonking a flying brawler."""
-    img = gradient((s, s), (80, 160, 255), (180, 225, 255)).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    # rays behind the action
-    for i in range(16):
-        a0 = math.pi * 2 / 16 * i
-        a1 = a0 + math.pi / 16
-        cx, cy, r = s * 0.55, s * 0.55, s
-        d.polygon([(cx, cy), (cx + math.cos(a0) * r, cy + math.sin(a0) * r), (cx + math.cos(a1) * r, cy + math.sin(a1) * r)], fill=(120, 190, 255))
-    cloud(d, s * 0.15, s * 0.9, s * 0.08)
-    cloud(d, s * 0.88, s * 0.82, s * 0.07)
-    island(d, s * 0.45, s * 0.83, s * 0.36, ARENAS["spin"], depth=s * 0.25)
-    paste_center(img, burst(s * 0.4, text=None), s * 0.6, s * 0.5)
-    paste_center(img, brawler(s * 0.46, shirt=(60, 140, 255), pose="fly", face="dizzy").rotate(-30, resample=Image.BICUBIC, expand=True), s * 0.77, s * 0.52)
-    paste_center(img, hammer(s * 0.6, angle=-50), s * 0.36, s * 0.6)
-    d = ImageDraw.Draw(img)
-    outlined_text(d, (s * 0.5, s * 0.12), "BONK", font(FONT_BOLD, int(s * 0.21)), (255, 215, 60), outline=(120, 20, 20), width=14)
-    outlined_text(d, (s * 0.5, s * 0.27), "ARENA", font(FONT_BOLD, int(s * 0.13)), (255, 255, 255), outline=(120, 20, 20), width=11)
-    return img
-
-
 def save(img, name, size=None):
     os.makedirs(OUT, exist_ok=True)
     if size:
@@ -274,16 +221,6 @@ def badge(bg_top, bg_bottom, draw_fn, label):
         size = 120 if len(label) <= 9 else 92
         outlined_text(d, (s / 2, s * 0.86), label, font(FONT_BOLD, size), (255, 255, 255), outline=(20, 20, 30), width=10)
     return img
-
-
-def crown(img, d, s):
-    cx, cy, r = s / 2, s * 0.42, s * 0.3
-    pts = [(cx - r, cy + r * 0.5), (cx - r, cy - r * 0.4), (cx - r * 0.5, cy), (cx, cy - r * 0.7), (cx + r * 0.5, cy), (cx + r, cy - r * 0.4), (cx + r, cy + r * 0.5)]
-    d.polygon(pts, fill=GOLD, outline=(150, 100, 0), width=12)
-    d.rectangle([cx - r, cy + r * 0.45, cx + r, cy + r * 0.7], fill=(230, 170, 20))
-    for x in (cx - r * 0.5, cx, cx + r * 0.5):
-        d.ellipse([x - 28, cy + r * 0.12, x + 28, cy + r * 0.12 + 56], fill=(220, 40, 90))
-    paste_center(img, hammer(s * 0.36, head=(255, 200, 40), handle=(150, 20, 60), angle=-40), s * 0.78, s * 0.62)
 
 
 def hammer_icon(head, handle, shape="hammer"):
@@ -337,38 +274,6 @@ def lightning(img, d, s):
         d.line([s * 0.4 + math.cos(a) * s * 0.08, s * 0.76 + math.sin(a) * s * 0.04, s * 0.4 + math.cos(a) * s * 0.16, s * 0.76 + math.sin(a) * s * 0.08], fill=(140, 220, 255), width=10)
 
 
-def dance_icon(kind):
-    def draw(img, d, s):
-        pose = "cheer" if kind == "heli" else "stand"
-        guy = brawler(s * 0.5, shirt=(255, 140, 60), pose=pose)
-        if kind == "flip":
-            guy = guy.rotate(150, resample=Image.BICUBIC, expand=True)
-        paste_center(img, guy, s / 2, s * 0.44)
-        d = ImageDraw.Draw(img)
-        white = (255, 255, 255)
-        if kind == "spin":
-            d.arc([s * 0.16, s * 0.52, s * 0.84, s * 0.74], 200, 340, fill=white, width=22)
-            d.arc([s * 0.16, s * 0.52, s * 0.84, s * 0.74], 20, 160, fill=white, width=22)
-            d.polygon([(s * 0.84, s * 0.6), (s * 0.9, s * 0.68), (s * 0.78, s * 0.68)], fill=white)
-            d.polygon([(s * 0.16, s * 0.66), (s * 0.1, s * 0.58), (s * 0.22, s * 0.58)], fill=white)
-        elif kind == "hop":
-            for x in (0.44, 0.56):
-                d.ellipse([s * (x - 0.03), s * 0.2, s * (x + 0.03), s * 0.33], fill=(255, 255, 255), outline=(200, 120, 150), width=8)
-            for i in range(3):
-                x = s * (0.12 + i * 0.27)
-                d.arc([x, s * 0.62, x + s * 0.24, s * 0.82], 180, 360, fill=white, width=14)
-        elif kind == "flip":
-            d.arc([s * 0.16, s * 0.12, s * 0.84, s * 0.78], 210, 30, fill=white, width=22)
-            d.polygon([(s * 0.8, s * 0.6), (s * 0.9, s * 0.52), (s * 0.84, s * 0.68)], fill=white)
-        elif kind == "heli":
-            d.rectangle([s * 0.49, s * 0.12, s * 0.51, s * 0.25], fill=(60, 60, 70))
-            d.ellipse([s * 0.14, s * 0.08, s * 0.86, s * 0.16], fill=(200, 210, 230), outline=(60, 60, 70), width=8)
-            for i in range(3):
-                d.arc([s * (0.1 - i * 0.03), s * (0.04 - i * 0.02), s * (0.9 + i * 0.03), s * (0.2 + i * 0.02)], 160, 200, fill=white, width=8)
-                d.arc([s * (0.1 - i * 0.03), s * (0.04 - i * 0.02), s * (0.9 + i * 0.03), s * (0.2 + i * 0.02)], 340, 20, fill=white, width=8)
-    return draw
-
-
 def title_icon(text, color):
     def draw(img, d, s):
         d.rounded_rectangle([s * 0.06, s * 0.3, s * 0.94, s * 0.6], radius=60, fill=NAVY, outline=color, width=16)
@@ -377,78 +282,264 @@ def title_icon(text, color):
     return draw
 
 
+
+def big_crown(size, jewels=True):
+    """A shiny golden crown on its own layer."""
+    img = layer(size)
+    d = ImageDraw.Draw(img)
+    s = size
+    w = max(3, int(s * 0.03))
+    base_top, base_bottom = s * 0.62, s * 0.82
+    pts = [(s * 0.12, base_top), (s * 0.08, s * 0.22), (s * 0.32, s * 0.45), (s * 0.5, s * 0.12), (s * 0.68, s * 0.45), (s * 0.92, s * 0.22), (s * 0.88, base_top)]
+    d.polygon(pts, fill=GOLD, outline=(150, 100, 0), width=w)
+    d.rounded_rectangle([s * 0.1, base_top, s * 0.9, base_bottom], radius=int(s * 0.04), fill=(235, 170, 20), outline=(150, 100, 0), width=w)
+    for x, y in ((0.08, 0.22), (0.5, 0.12), (0.92, 0.22)):
+        r = s * 0.06
+        d.ellipse([s * x - r, s * y - r, s * x + r, s * y + r], fill=(255, 235, 140), outline=(150, 100, 0), width=w)
+    if jewels:
+        for x, color in ((0.3, (60, 140, 255)), (0.5, (230, 40, 90)), (0.7, (70, 200, 110))):
+            r = s * 0.055
+            cy = (base_top + base_bottom) / 2
+            d.ellipse([s * x - r, cy - r, s * x + r, cy + r], fill=color, outline=shade(color, -80), width=max(2, w // 2))
+    d.polygon([(s * 0.2, s * 0.5), (s * 0.27, s * 0.34), (s * 0.3, s * 0.52)], fill=(255, 240, 170))
+    return img
+
+
+def platform(d, x0, x1, top, color, depth=26):
+    """A floating course block, seen from the side."""
+    d.rectangle([x0, top, x1, top + depth], fill=shade(color, -40), outline=shade(color, -90), width=3)
+    d.rectangle([x0, top - depth * 0.35, x1, top], fill=color, outline=shade(color, -70), width=3)
+
+
+def scene(size, title=True, tagline=None):
+    """A sky obstacle course: runners race up past a spinner to a giant crown."""
+    w, h = size
+    img = gradient(size, SKY_TOP, SKY_BOTTOM).convert("RGBA")
+    d = ImageDraw.Draw(img)
+    for cx, cy, r in ((0.12, 0.7, 0.06), (0.88, 0.78, 0.07), (0.3, 0.93, 0.05), (0.66, 0.95, 0.06), (0.55, 0.25, 0.04)):
+        cloud(d, w * cx, h * cy, h * r)
+    pink, mint, lilac = WORLDS["candy"][1], (130, 230, 190), (180, 150, 255)
+    # A staircase of blocks rising left to right, the crown on the top one
+    steps = [(0.02, 0.24, 0.82, pink), (0.27, 0.42, 0.7, mint), (0.45, 0.6, 0.58, lilac), (0.63, 0.78, 0.47, pink), (0.8, 0.98, 0.36, (255, 220, 90))]
+    for x0, x1, top, color in steps:
+        platform(d, w * x0, w * x1, h * top, color, depth=h * 0.05)
+    # a spinner bar on the middle block
+    cx, top = w * 0.525, h * 0.58
+    d.rectangle([cx - 8, top - h * 0.12, cx + 8, top - h * 0.02], fill=(90, 90, 110))
+    d.rounded_rectangle([cx - w * 0.1, top - h * 0.14, cx + w * 0.1, top - h * 0.11], radius=8, fill=(255, 70, 90), outline=(120, 20, 40), width=4)
+    d.arc([cx - w * 0.12, top - h * 0.2, cx + w * 0.12, top - h * 0.05], 200, 250, fill=(255, 255, 255), width=8)
+    # the crown, glowing
+    gx, gy = w * 0.89, h * 0.36 - h * 0.13
+    for r, a in ((h * 0.2, 35), (h * 0.15, 55)):
+        glow = layer(r * 2)
+        ImageDraw.Draw(glow).ellipse([0, 0, r * 2, r * 2], fill=(255, 240, 150, a))
+        paste_center(img, glow, gx, gy)
+    paste_center(img, big_crown(h * 0.26), gx, gy)
+    # runners: one leaping for the crown, one on each step, one bounced off by the spinner
+    paste_center(img, brawler(h * 0.3, shirt=SHIRTS[0], pose="cheer").rotate(-15, resample=Image.BICUBIC, expand=True), w * 0.75, h * 0.29)
+    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[1], pose="run"), w * 0.68, h * 0.38)
+    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[2], pose="run"), w * 0.36, h * 0.6)
+    paste_center(img, brawler(h * 0.24, shirt=SHIRTS[3], pose="run"), w * 0.13, h * 0.72)
+    paste_center(img, brawler(h * 0.22, shirt=SHIRTS[4], pose="fly", face="dizzy").rotate(30, resample=Image.BICUBIC, expand=True), w * 0.46, h * 0.31)
+    d = ImageDraw.Draw(img)
+    motion_lines(d, w * 0.63, h * 0.39, w * 0.07, 0, count=3, spacing=h * 0.025, width=max(4, int(h * 0.007)))
+    motion_lines(d, w * 0.31, h * 0.61, w * 0.06, 0, count=3, spacing=h * 0.025, width=max(4, int(h * 0.007)))
+    if title:
+        outlined_text(d, (w * 0.4, h * 0.13), "CROWN RUSH", font(FONT_BOLD, int(h * 0.14)), (255, 215, 60), outline=(110, 30, 90), width=max(4, int(h * 0.012)))
+    if tagline:
+        d.rounded_rectangle([w * 0.08, h * 0.86, w * 0.92, h * 0.95], radius=int(h * 0.03), fill=(20, 20, 40, 200))
+        outlined_text(d, (w * 0.5, h * 0.905), tagline, font(FONT_SEMI, int(h * 0.04)), (255, 255, 255), width=max(2, int(h * 0.004)))
+    return img
+
+
+def icon_art(s):
+    """The square game icon: a runner leaping for a giant crown."""
+    img = gradient((s, s), (255, 140, 200), (255, 210, 120)).convert("RGBA")
+    d = ImageDraw.Draw(img)
+    for i in range(18):
+        a0 = math.pi * 2 / 18 * i
+        a1 = a0 + math.pi / 18
+        cx, cy, r = s * 0.62, s * 0.5, s * 1.2
+        d.polygon([(cx, cy), (cx + math.cos(a0) * r, cy + math.sin(a0) * r), (cx + math.cos(a1) * r, cy + math.sin(a1) * r)], fill=(255, 175, 200))
+    cloud(d, s * 0.14, s * 0.92, s * 0.09)
+    cloud(d, s * 0.9, s * 0.9, s * 0.08)
+    platform(d, s * 0.5, s * 1.02, s * 0.74, (255, 220, 90), depth=s * 0.08)
+    platform(d, -s * 0.02, s * 0.36, s * 0.9, (150, 110, 255), depth=s * 0.08)
+    paste_center(img, big_crown(s * 0.46), s * 0.72, s * 0.52)
+    paste_center(img, brawler(s * 0.5, shirt=(60, 140, 255), pose="cheer").rotate(-25, resample=Image.BICUBIC, expand=True), s * 0.33, s * 0.6)
+    d = ImageDraw.Draw(img)
+    motion_lines(d, s * 0.16, s * 0.72, s * 0.14, 215, count=3, spacing=s * 0.035, width=12)
+    outlined_text(d, (s * 0.5, s * 0.11), "CROWN", font(FONT_BOLD, int(s * 0.19)), (255, 225, 70), outline=(110, 30, 90), width=14)
+    outlined_text(d, (s * 0.5, s * 0.26), "RUSH", font(FONT_BOLD, int(s * 0.16)), (255, 255, 255), outline=(110, 30, 90), width=12)
+    return img
+
+
+def trail_icon(colors):
+    """A runner zooming past with a coloured trail."""
+    def draw(img, d, s):
+        # A tapering streak behind the runner, one band per colour
+        n = len(colors)
+        bands = max(n, 3)
+        wide, narrow = s * 0.34, s * 0.14
+        for i in range(bands):
+            color = colors[i % n]
+            y0 = s * 0.42 - wide / 2 + wide * i / bands
+            y1 = s * 0.42 - narrow / 2 + narrow * i / bands
+            d.polygon([(s * 0.04, y0), (s * 0.55, y1), (s * 0.55, y1 + narrow / bands), (s * 0.04, y0 + wide / bands)], fill=color)
+        for _ in range(10):
+            star(d, random.uniform(s * 0.08, s * 0.5), random.uniform(s * 0.2, s * 0.62), s * 0.025, (255, 255, 240))
+        paste_center(img, brawler(s * 0.48, shirt=(60, 140, 255), pose="run"), s * 0.66, s * 0.42)
+    return draw
+
+
+def card_scene(kind, size):
+    """A small picture for each kind of tournament round."""
+    w, h = size
+    sky = gradient(size, SKY_TOP, SKY_BOTTOM).convert("RGBA")
+    d = ImageDraw.Draw(sky)
+    if kind == "RACE":
+        platform(d, 10, w - 10, h * 0.72, (255, 170, 210), depth=40)
+        d.rectangle([w * 0.82, h * 0.3, w * 0.86, h * 0.72], fill=(60, 60, 70))
+        for k in range(4):
+            d.rectangle([w * 0.86, h * (0.3 + k * 0.05), w * 0.96, h * (0.35 + k * 0.05)], fill=(255, 255, 255) if k % 2 == 0 else (30, 30, 30))
+        for i, x in enumerate((0.22, 0.45, 0.66)):
+            paste_center(sky, brawler(h * 0.42, shirt=SHIRTS[i], pose="run"), w * x, h * 0.53)
+    elif kind == "SURVIVAL":
+        d.rectangle([0, h * 0.78, w, h], fill=(255, 110, 30))
+        for k in range(5):
+            d.polygon([(k * w / 4.0 - 30, h * 0.78), (k * w / 4.0, h * 0.7), (k * w / 4.0 + 30, h * 0.78)], fill=(255, 170, 60))
+        for k, (x, top) in enumerate(((0.2, 0.62), (0.5, 0.48), (0.8, 0.34))):
+            platform(d, w * (x - 0.12), w * (x + 0.12), h * top, (175, 220, 250), depth=24)
+        paste_center(sky, brawler(h * 0.34, shirt=SHIRTS[3], pose="cheer"), w * 0.8, h * 0.2)
+        paste_center(sky, brawler(h * 0.3, shirt=SHIRTS[1], pose="run"), w * 0.5, h * 0.36)
+    elif kind == "FIGHT":
+        island(d, w / 2, h * 0.7, w * 0.42, (255, 220, 90), depth=h * 0.25)
+        paste_center(sky, brawler(h * 0.42, shirt=SHIRTS[0], pose="swing"), w * 0.36, h * 0.5)
+        paste_center(sky, hammer(h * 0.36, angle=-75), w * 0.46, h * 0.38)
+        paste_center(sky, brawler(h * 0.34, shirt=SHIRTS[1], pose="fly", face="dizzy").rotate(-35, resample=Image.BICUBIC, expand=True), w * 0.78, h * 0.3)
+    else:  # TEAM
+        island(d, w / 2, h * 0.74, w * 0.45, (130, 230, 190), depth=h * 0.22)
+        d.ellipse([w * 0.38, h * 0.38, w * 0.62, h * 0.72], fill=(255, 220, 90), outline=(150, 100, 0), width=6)
+        paste_center(sky, brawler(h * 0.36, shirt=(235, 70, 70), pose="run"), w * 0.24, h * 0.56)
+        paste_center(sky, brawler(h * 0.36, shirt=(60, 140, 255), pose="run").transpose(Image.FLIP_LEFT_RIGHT), w * 0.78, h * 0.56)
+    return sky
+
+
+def cards_thumbnail(title, subtitle, cards, bg_top, bg_bottom):
+    t = gradient((1920, 1080), bg_top, bg_bottom).convert("RGBA")
+    d = ImageDraw.Draw(t)
+    outlined_text(d, (960, 110), title, font(FONT_BOLD, 112), (255, 215, 60), outline=(110, 30, 90), width=10)
+    d.text((960, 210), subtitle, font=font(FONT_SEMI, 46), fill=(235, 235, 255), anchor="mm")
+    width = 1820 // len(cards)
+    left = (1920 - (len(cards) * width - 40)) // 2
+    for i, (head, sub, color, picture) in enumerate(cards):
+        x0 = left + i * width
+        d.rounded_rectangle([x0, 290, x0 + width - 40, 990], radius=36, fill=(25, 28, 55), outline=color, width=10)
+        pic = picture((width - 80, 380))
+        mask = Image.new("L", pic.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, pic.width, pic.height], radius=24, fill=255)
+        t.paste(pic, (x0 + 20, 310), mask)
+        d = ImageDraw.Draw(t)
+        cx = x0 + (width - 40) / 2
+        outlined_text(d, (cx, 790), head, font(FONT_BOLD, 50 if len(cards) <= 4 else 36), color, width=4)
+        d.text((cx, 870), sub, font=font(FONT_SEMI, 28 if len(cards) <= 4 else 24), fill=(220, 225, 255), anchor="mm")
+    return t
+
+
+def world_scene(key):
+    name, floor, accent = WORLDS[key]
+    def picture(size):
+        w, h = size
+        tops = {"candy": ((150, 200, 255), (255, 215, 235)), "jungle": ((140, 200, 170), (170, 210, 160)), "frost": ((190, 220, 245), (225, 240, 255)), "lava": ((90, 50, 40), (200, 90, 40)), "space": ((20, 15, 45), (60, 40, 110))}
+        img = gradient(size, *tops[key]).convert("RGBA")
+        d = ImageDraw.Draw(img)
+        if key == "space":
+            for _ in range(40):
+                x, y = random.uniform(0, w), random.uniform(0, h * 0.7)
+                d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=(255, 255, 255))
+        if key == "candy":
+            for cx, cy in ((0.25, 0.25), (0.8, 0.85)):
+                cloud(d, w * cx, h * cy, h * 0.06)
+        elif key == "jungle":
+            for k in range(5):
+                x = w * (0.1 + k * 0.2)
+                d.line([x, 0, x + 10, h * random.uniform(0.15, 0.35)], fill=(60, 120, 60), width=6)
+                d.ellipse([x - 4, h * 0.3 - 12, x + 22, h * 0.3 + 6], fill=(80, 160, 80))
+        elif key == "frost":
+            for _ in range(30):
+                x, y = random.uniform(0, w), random.uniform(0, h)
+                d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=(255, 255, 255))
+        elif key == "lava":
+            d.rectangle([0, h * 0.88, w, h], fill=(255, 110, 30))
+        platform(d, w * 0.02, w * 0.36, h * 0.78, floor, depth=30)
+        platform(d, w * 0.64, w * 0.98, h * 0.55, floor, depth=30)
+        # a gem floating over the gap, and a star
+        gx, gy = w * 0.5, h * 0.42
+        d.polygon([(gx, gy - 26), (gx + 20, gy), (gx, gy + 26), (gx - 20, gy)], fill=(80, 230, 255), outline=(20, 110, 150), width=4)
+        star(d, w * 0.82, h * 0.2, 26, (255, 225, 60), points=5, inner=0.45, outline=(160, 100, 0), width=3)
+        jumper = brawler(h * 0.34, shirt=random.choice(SHIRTS), pose="cheer").rotate(-20, resample=Image.BICUBIC, expand=True)
+        paste_center(img, jumper, w * 0.3, h * 0.5)
+        d = ImageDraw.Draw(img)
+        d.arc([w * 0.1, h * 0.35, w * 0.9, h * 1.0], 200, 290, fill=(255, 255, 255), width=5)
+        return img
+    return name, picture
+
+
 def main():
     random.seed(7)
 
     save(icon_art(1024), "game_icon_512.png", (512, 512))
 
-    save(scene((1920, 1080), tagline="Bonk your friends off the arena  -  2 to 4 players  -  4 crazy arenas"), "thumbnail_1_1920x1080.png")
+    save(scene((1920, 1080), tagline="Race, survive and bonk your way to the crown  -  30 courses  -  15 rounds"), "thumbnail_1_1920x1080.png")
 
-    # Thumbnail 2: the four arenas
-    t2 = gradient((1920, 1080), (40, 50, 110), (20, 24, 60)).convert("RGBA")
-    d = ImageDraw.Draw(t2)
-    outlined_text(d, (960, 110), "BONK ARENA", font(FONT_BOLD, 120), (255, 215, 60), outline=(120, 20, 20), width=10)
-    d.text((960, 210), "A new arena every round", font=font(FONT_SEMI, 44), fill=(220, 225, 255), anchor="mm")
-    cards = [
-        ("ICE FLOE", "Slippery tiles crack away", ARENAS["ice"]),
-        ("SPIN CYCLE", "Jump the sweeper bar", ARENAS["spin"]),
-        ("LAVA RISE", "Climb before it reaches you", ARENAS["lava"]),
-        ("BOUNCE HOUSE", "Bouncy walls fall one by one", ARENAS["bounce"]),
-    ]
-    for i, (head, sub, color) in enumerate(cards):
-        x0 = 70 + i * 455
-        d.rounded_rectangle([x0, 290, x0 + 415, 990], radius=36, fill=(25, 28, 55), outline=color, width=10)
-        sky = gradient((375, 380), SKY_TOP, SKY_BOTTOM).convert("RGBA")
-        sd = ImageDraw.Draw(sky)
-        if head == "LAVA RISE":
-            sd.rectangle([0, 300, 375, 380], fill=(255, 110, 30))
-            for k, (rx, top) in enumerate(((150, 250), (110, 200), (70, 150), (36, 100))):
-                sd.rectangle([187 - rx, top, 187 + rx, 300], fill=shade((120, 95, 80), k * 12), outline=(70, 55, 45), width=3)
-        elif head == "ICE FLOE":
-            island(sd, 187, 230, 150, color, depth=110)
-            for k in range(-5, 6):
-                sd.line([187 + k * 26, 210, 187 + k * 26, 250], fill=shade(color, -40), width=2)
-            sd.polygon([(60, 230), (90, 226), (80, 250)], fill=SKY_BOTTOM)
-        elif head == "SPIN CYCLE":
-            island(sd, 187, 240, 150, color, depth=110)
-            sd.rounded_rectangle([60, 222, 314, 236], radius=6, fill=(230, 50, 50), outline=(110, 20, 20), width=3)
-            sd.arc([40, 200, 334, 280], 200, 250, fill=(255, 255, 255), width=8)
-        else:
-            island(sd, 187, 250, 150, color, depth=110)
-            for wx in (50, 300):
-                sd.rounded_rectangle([wx, 150, wx + 26, 250], radius=10, fill=shade(color, 30), outline=shade(color, -70), width=4)
-        paste_center(sky, brawler(150, shirt=random.choice([(230, 60, 60), (60, 140, 255), (90, 200, 90), (255, 170, 40)]), pose="swing"), 160, 160)
-        mask = Image.new("L", sky.size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, sky.width, sky.height], radius=24, fill=255)
-        t2.paste(sky, (x0 + 20, 310), mask)
-        d = ImageDraw.Draw(t2)
-        outlined_text(d, (x0 + 207, 790), head, font(FONT_BOLD, 50 if len(head) < 11 else 42), color, width=4)
-        d.text((x0 + 207, 870), sub, font=font(FONT_SEMI, 28), fill=(220, 225, 255), anchor="mm")
-    save(t2, "thumbnail_2_1920x1080.png")
+    save(
+        cards_thumbnail(
+            "TOURNAMENTS",
+            "12 runners  -  4 rounds  -  1 crown",
+            [
+                ("RACE", "First over the line wins", (60, 170, 255), lambda size: card_scene("RACE", size)),
+                ("SURVIVAL", "Stay on as the floor falls", (255, 140, 60), lambda size: card_scene("SURVIVAL", size)),
+                ("FIGHT", "Bonk rivals off the ring", (230, 80, 80), lambda size: card_scene("FIGHT", size)),
+                ("TEAM", "Eggs, balls and teamwork", (150, 110, 255), lambda size: card_scene("TEAM", size)),
+            ],
+            (40, 50, 110),
+            (20, 24, 60),
+        ),
+        "thumbnail_2_1920x1080.png",
+    )
 
-    save(badge((255, 210, 80), (200, 120, 20), crown, "VIP"), "pass_vip.png", (512, 512))
+    worlds = []
+    for key in ("candy", "jungle", "frost", "lava", "space"):
+        name, picture = world_scene(key)
+        worlds.append((name, "6 courses", WORLDS[key][2], picture))
+    save(cards_thumbnail("ADVENTURE", "30 courses in 5 worlds  -  stars, gems and ghosts", worlds, (60, 40, 110), (25, 20, 55)), "thumbnail_3_1920x1080.png")
 
+    def vip(img, d, s):
+        paste_center(img, big_crown(s * 0.62), s / 2, s * 0.42)
+
+    save(badge((255, 210, 80), (200, 120, 20), vip, "VIP"), "pass_vip.png", (512, 512))
+
+    trail_bg = ((80, 160, 255), (30, 50, 130))
+    cel_bg = ((120, 90, 230), (40, 25, 100))
     hammers_bg = ((235, 90, 90), (120, 30, 40))
-    ko_bg = ((120, 90, 230), (40, 25, 100))
-    dance_bg = ((70, 200, 160), (20, 90, 80))
     title_bg = ((90, 110, 160), (30, 36, 60))
     products = [
+        ("product_trail_rainbow.png", trail_bg, trail_icon([(255, 0, 0), (255, 255, 0), (0, 255, 0), (0, 120, 255), (200, 0, 255)]), "RAINBOW"),
+        ("product_trail_fire.png", trail_bg, trail_icon([(255, 220, 0), (255, 120, 0), (255, 40, 0)]), "FIRE"),
+        ("product_trail_stars.png", trail_bg, trail_icon([(255, 255, 200), (180, 140, 255), (90, 70, 200)]), "STAR DUST"),
+        ("product_trail_bubblepop.png", trail_bg, trail_icon([(255, 150, 220), (255, 210, 240)]), "BUBBLEGUM"),
+        ("product_trail_lightning.png", trail_bg, trail_icon([(140, 220, 255), (255, 255, 255)]), "LIGHTNING"),
+        ("product_cel_confetti.png", cel_bg, confetti, "CONFETTI"),
+        ("product_cel_star.png", cel_bg, cartoon_star, "STAR"),
+        ("product_cel_fireworks.png", cel_bg, fireworks, "FIREWORKS"),
+        ("product_cel_lightning.png", cel_bg, lightning, "LIGHTNING"),
         ("product_hammer_golden.png", hammers_bg, hammer_icon((255, 190, 30), (255, 230, 120)), "GOLDEN"),
         ("product_hammer_neon.png", hammers_bg, hammer_icon((255, 60, 200), (60, 255, 230)), "NEON"),
-        ("product_hammer_galaxy.png", hammers_bg, hammer_icon((110, 60, 255), (30, 20, 60)), "GALAXY"),
         ("product_hammer_chicken.png", hammers_bg, hammer_icon((255, 225, 60), (255, 150, 40), "chicken"), "CHICKEN"),
         ("product_hammer_fish.png", hammers_bg, hammer_icon((80, 170, 220), (240, 120, 60), "fish"), "BIG FISH"),
-        ("product_ko_confetti.png", ko_bg, confetti, "CONFETTI"),
-        ("product_ko_star.png", ko_bg, cartoon_star, "STAR"),
-        ("product_ko_fireworks.png", ko_bg, fireworks, "FIREWORKS"),
-        ("product_ko_lightning.png", ko_bg, lightning, "LIGHTNING"),
-        ("product_dance_spin.png", dance_bg, dance_icon("spin"), "SPIN"),
-        ("product_dance_hop.png", dance_bg, dance_icon("hop"), "BUNNY HOP"),
-        ("product_dance_flip.png", dance_bg, dance_icon("flip"), "BACKFLIP"),
-        ("product_dance_heli.png", dance_bg, dance_icon("heli"), "HELICOPTER"),
-        ("product_title_hammertime.png", title_bg, title_icon("Hammer Time", (120, 200, 255)), "TITLE"),
-        ("product_title_unbonkable.png", title_bg, title_icon("Unbonkable", (160, 255, 160)), "TITLE"),
-        ("product_title_bonkmaster.png", title_bg, title_icon("Bonk Master", (255, 170, 60)), "TITLE"),
+        ("product_title_obbymaster.png", title_bg, title_icon("Obby Master", (120, 200, 255)), "TITLE"),
+        ("product_title_speeddemon.png", title_bg, title_icon("Speed Demon", (255, 90, 90)), "TITLE"),
+        ("product_title_royalty.png", title_bg, title_icon("Crown Royalty", (255, 200, 60)), "TITLE"),
     ]
     for name, (top, bottom), fn, label in products:
         save(badge(top, bottom, fn, label), name, (512, 512))
