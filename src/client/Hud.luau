@@ -24,14 +24,17 @@ local STAR = utf8.char(9733)
 
 function Hud.Init(screenGui)
 	-- Stats, top left
-	local stats = UI.new("Frame", {
-		Name = "Stats",
-		Position = UDim2.fromOffset(16, 60),
-		Size = UDim2.fromOffset(230, 96),
-		BackgroundColor3 = T.Background,
-		BackgroundTransparency = 0.15,
-		Parent = screenGui,
-	}, { UI.corner(12), UI.padding(10), UI.list(4) })
+	local stats = UI.new(
+		"Frame",
+		UI.with({
+			Name = "Stats",
+			Size = UDim2.fromOffset(230, 96),
+			BackgroundColor3 = T.Background,
+			BackgroundTransparency = 0.15,
+			Parent = screenGui,
+		}, UI.side(60)),
+		{ UI.corner(12), UI.padding(10), UI.list(4) }
+	)
 	local levelLine = UI.label("Lv 1 Runner", {
 		Size = UDim2.new(1, 0, 0, 22),
 		TextColor3 = Color3.fromRGB(150, 220, 255),
@@ -115,15 +118,18 @@ function Hud.Init(screenGui)
 		return ReplicatedStorage:GetAttribute("PrivateServerOwnerId") == player.UserId
 	end
 
-	-- Menu buttons, left side under the stats, with keyboard shortcuts. On touch
-	-- screens they make one row, so they stay above the thumbstick.
-	local menu = UI.new("Frame", {
-		Name = "Menu",
-		Position = UDim2.fromOffset(16, 166),
-		Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
-		BackgroundTransparency = 1,
-		Parent = screenGui,
-	}, { UI.list(6, UI.Touch and Enum.FillDirection.Horizontal or nil) })
+	-- Menu buttons under the stats, with keyboard shortcuts. On touch screens
+	-- they make one row on the right, clear of the chat and the thumbstick.
+	local menu = UI.new(
+		"Frame",
+		UI.with({
+			Name = "Menu",
+			Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
+			BackgroundTransparency = 1,
+			Parent = screenGui,
+		}, UI.side(166)),
+		{ UI.sideList(6) }
+	)
 	local buttons = {
 		{ "Courses", "Courses", Color3.fromRGB(255, 120, 180), Enum.KeyCode.C },
 		{ "Shop", "Shop", Color3.fromRGB(70, 200, 110), Enum.KeyCode.P },

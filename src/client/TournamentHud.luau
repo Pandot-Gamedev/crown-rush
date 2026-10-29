@@ -288,8 +288,8 @@ local function build(screenGui)
 		act("LeaveTournament")
 	end, {
 		-- bottom left, or under the stats on touch screens (the thumbstick lives bottom left)
-		AnchorPoint = UI.Touch and Vector2.new(0, 0) or Vector2.new(0, 1),
-		Position = UI.Touch and UDim2.fromOffset(16, 166) or UDim2.new(0, 16, 1, -16),
+		AnchorPoint = UI.Touch and Vector2.new(1, 0) or Vector2.new(0, 1),
+		Position = UI.Touch and UDim2.new(1, -16, 0, 166) or UDim2.new(0, 16, 1, -16),
 		Size = UDim2.fromOffset(180, 44),
 		Visible = false,
 		Parent = screenGui,

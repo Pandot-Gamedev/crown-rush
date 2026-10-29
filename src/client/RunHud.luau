@@ -211,15 +211,18 @@ local function buildBar(screenGui)
 		gemLabels[index] = UI.label(GEM, { Size = UDim2.fromOffset(22, 22), LayoutOrder = index, Parent = gemRow })
 	end
 
-	-- Left side under the stats; one row on touch screens, above the thumbstick
-	buttons = UI.new("Frame", {
-		Name = "RunButtons",
-		Position = UDim2.fromOffset(16, 166),
-		Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 4 * 48),
-		BackgroundTransparency = 1,
-		Visible = false,
-		Parent = screenGui,
-	}, { UI.list(6, UI.Touch and Enum.FillDirection.Horizontal or nil) })
+	-- Under the stats; one row on the right on touch screens (see UI.side)
+	buttons = UI.new(
+		"Frame",
+		UI.with({
+			Name = "RunButtons",
+			Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 4 * 48),
+			BackgroundTransparency = 1,
+			Visible = false,
+			Parent = screenGui,
+		}, UI.side(166)),
+		{ UI.sideList(6) }
+	)
 	local buttonSize = UI.Touch and UDim2.fromOffset(100, 40) or UDim2.fromOffset(130, 42)
 	local keys = UserInputService.KeyboardEnabled
 	UI.button(keys and "Restart (R)" or "Restart", T.Accent, function()

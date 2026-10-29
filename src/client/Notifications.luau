@@ -23,8 +23,9 @@ local container
 function Notifications.Init(screenGui)
 	container = UI.new("Frame", {
 		Name = "Toasts",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 70),
+		-- top right, or top middle on touch screens (the side column is on the right there)
+		AnchorPoint = UI.Touch and Vector2.new(0.5, 0) or Vector2.new(1, 0),
+		Position = UI.Touch and UDim2.new(0.5, 0, 0, 110) or UDim2.new(1, -16, 0, 70),
 		Size = UDim2.fromOffset(320, 400),
 		BackgroundTransparency = 1,
 		ZIndex = 20, -- above open windows

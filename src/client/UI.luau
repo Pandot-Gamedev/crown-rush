@@ -8,6 +8,34 @@ local UI = {}
 -- Phones and tablets: bigger buttons, menus out of the thumbstick's way
 UI.Touch = UserInputService.TouchEnabled
 
+-- The side column (stats, menus, course buttons) runs down the left on
+-- computers. Touch screens put it on the right instead: Roblox's chat window
+-- covers the top left there and the thumbstick the bottom left.
+function UI.side(y)
+	if UI.Touch then
+		return { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, y) }
+	end
+	return { AnchorPoint = Vector2.new(0, 0), Position = UDim2.fromOffset(16, y) }
+end
+
+-- The layout for a group of buttons in the side column: a column on
+-- computers, a row hugging the right edge on touch screens
+function UI.sideList(spacing)
+	local list = UI.list(spacing, UI.Touch and Enum.FillDirection.Horizontal or nil)
+	if UI.Touch then
+		list.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	end
+	return list
+end
+
+-- Copies props into a table of props (for UI.new)
+function UI.with(props, extra)
+	for key, value in pairs(extra) do
+		props[key] = value
+	end
+	return props
+end
+
 UI.Theme = {
 	Background = Color3.fromRGB(20, 32, 52),
 	Panel = Color3.fromRGB(30, 46, 74),
