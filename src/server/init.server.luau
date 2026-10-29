@@ -22,6 +22,9 @@ local WorldService = require(script.WorldService)
 local CombatService = require(script.CombatService)
 local TournamentService = require(script.TournamentService)
 
+-- Phones play sideways only (either way round)
+game:GetService("StarterGui").ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
+
 -- Players' screens can't check who owns a private server, so share it
 if game.PrivateServerId ~= "" then
 	game:GetService("ReplicatedStorage"):SetAttribute("PrivateServerOwnerId", game.PrivateServerOwnerId)

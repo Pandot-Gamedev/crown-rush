@@ -1,7 +1,12 @@
 -- Helpers for building the on-screen menus in code, so nothing has to be
 -- drawn by hand in Studio. Colors and fonts live in UI.Theme.
 
+local UserInputService = game:GetService("UserInputService")
+
 local UI = {}
+
+-- Phones and tablets: bigger buttons, menus out of the thumbstick's way
+UI.Touch = UserInputService.TouchEnabled
 
 UI.Theme = {
 	Background = Color3.fromRGB(20, 32, 52),

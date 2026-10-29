@@ -67,7 +67,8 @@ function Guide.Init(screenGui)
 	card = UI.new("Frame", {
 		Name = "GuideCard",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 120),
+		-- on touch screens, below the menu row
+		Position = UDim2.new(0.5, 0, 0, UI.Touch and 216 or 120),
 		Size = UDim2.fromOffset(560, 56),
 		BackgroundColor3 = Color3.fromRGB(255, 244, 214),
 		Visible = false,

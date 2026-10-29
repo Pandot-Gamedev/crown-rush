@@ -115,14 +115,15 @@ function Hud.Init(screenGui)
 		return ReplicatedStorage:GetAttribute("PrivateServerOwnerId") == player.UserId
 	end
 
-	-- Menu buttons, left side under the stats, with keyboard shortcuts
+	-- Menu buttons, left side under the stats, with keyboard shortcuts. On touch
+	-- screens they make one row, so they stay above the thumbstick.
 	local menu = UI.new("Frame", {
 		Name = "Menu",
 		Position = UDim2.fromOffset(16, 166),
-		Size = UDim2.fromOffset(130, 5 * 48),
+		Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
 		BackgroundTransparency = 1,
 		Parent = screenGui,
-	}, { UI.list(6) })
+	}, { UI.list(6, UI.Touch and Enum.FillDirection.Horizontal or nil) })
 	local buttons = {
 		{ "Courses", "Courses", Color3.fromRGB(255, 120, 180), Enum.KeyCode.C },
 		{ "Shop", "Shop", Color3.fromRGB(70, 200, 110), Enum.KeyCode.P },
@@ -134,7 +135,11 @@ function Hud.Init(screenGui)
 		local keyName = UserInputService.KeyboardEnabled and (" (" .. info[4].Name .. ")") or ""
 		UI.button(info[1] .. keyName, info[3], function()
 			Panels[info[2]].toggle()
-		end, { Size = UDim2.fromOffset(130, 42), LayoutOrder = index, Parent = menu })
+		end, {
+			Size = UI.Touch and UDim2.fromOffset(100, 40) or UDim2.fromOffset(130, 42),
+			LayoutOrder = index,
+			Parent = menu,
+		})
 		shortcuts[info[4]] = info[2]
 	end
 

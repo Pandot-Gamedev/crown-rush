@@ -1,5 +1,5 @@
 -- Dive, jump help, and the hammer swing in fight rounds.
---   Dive: Q, X on a controller, or the DIVE button on phones.
+--   Dive: Q, X on a controller, or the DIVE button on phones (TouchButtons).
 --         A quick forward lunge, once per jump, to reach a ledge or grab a gem.
 --   Jump help: you can still jump a moment after running off an edge, and a
 --         jump pressed just before landing still counts. Phones need this most.
@@ -171,9 +171,7 @@ local function showBonkButton(on)
 				Controls.Bonk()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, Enum.UserInputType.MouseButton1, Enum.KeyCode.F, Enum.KeyCode.ButtonR2)
-		ContextActionService:SetTitle("CrownRushBonk", "BONK")
-		ContextActionService:SetPosition("CrownRushBonk", UDim2.new(1, -150, 1, -150))
+		end, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.F, Enum.KeyCode.ButtonR2)
 	else
 		ContextActionService:UnbindAction("CrownRushBonk")
 	end
@@ -206,9 +204,7 @@ function Controls.Init()
 			Controls.Dive()
 		end
 		return Enum.ContextActionResult.Sink
-	end, true, Enum.KeyCode.Q, Enum.KeyCode.ButtonX)
-	ContextActionService:SetTitle("CrownRushDive", "DIVE")
-	ContextActionService:SetPosition("CrownRushDive", UDim2.new(1, -230, 1, -100))
+	end, false, Enum.KeyCode.Q, Enum.KeyCode.ButtonX)
 
 	UserInputService.JumpRequest:Connect(onJumpRequest)
 	Movement.Launched:Connect(function()

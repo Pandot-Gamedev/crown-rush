@@ -211,26 +211,28 @@ local function buildBar(screenGui)
 		gemLabels[index] = UI.label(GEM, { Size = UDim2.fromOffset(22, 22), LayoutOrder = index, Parent = gemRow })
 	end
 
+	-- Left side under the stats; one row on touch screens, above the thumbstick
 	buttons = UI.new("Frame", {
 		Name = "RunButtons",
 		Position = UDim2.fromOffset(16, 166),
-		Size = UDim2.fromOffset(130, 4 * 48),
+		Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 4 * 48),
 		BackgroundTransparency = 1,
 		Visible = false,
 		Parent = screenGui,
-	}, { UI.list(6) })
+	}, { UI.list(6, UI.Touch and Enum.FillDirection.Horizontal or nil) })
+	local buttonSize = UI.Touch and UDim2.fromOffset(100, 40) or UDim2.fromOffset(130, 42)
 	local keys = UserInputService.KeyboardEnabled
 	UI.button(keys and "Restart (R)" or "Restart", T.Accent, function()
 		act("RetryCourse")
-	end, { Size = UDim2.fromOffset(130, 42), LayoutOrder = 1, Parent = buttons })
+	end, { Size = buttonSize, LayoutOrder = 1, Parent = buttons })
 	UI.button("Leave", T.Bad, function()
 		act("LeaveCourse")
-	end, { Size = UDim2.fromOffset(130, 42), LayoutOrder = 2, Parent = buttons })
+	end, { Size = buttonSize, LayoutOrder = 2, Parent = buttons })
 	skipButton = UI.button("Skip ahead", Color3.fromRGB(170, 100, 255), function()
 		act("SkipSection")
-	end, { Size = UDim2.fromOffset(130, 42), LayoutOrder = 3, Visible = false, Parent = buttons })
+	end, { Size = buttonSize, LayoutOrder = 3, Visible = false, Parent = buttons })
 	ghostButton = UI.button(GHOST_NAMES[ghostChoice], Color3.fromRGB(90, 110, 150), cycleGhost, {
-		Size = UDim2.fromOffset(130, 42),
+		Size = buttonSize,
 		LayoutOrder = 4,
 		Parent = buttons,
 	})
