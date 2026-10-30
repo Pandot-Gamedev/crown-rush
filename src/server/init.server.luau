@@ -1,4 +1,4 @@
--- Crown Rush server. Starts every service in order.
+-- Only 1 Gets the Crown! server. Starts every service in order.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")

@@ -1,4 +1,4 @@
--- Crown Rush player script. Builds the screen and starts the controls.
+-- Only 1 Gets the Crown! player script. Builds the screen and starts the controls.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")

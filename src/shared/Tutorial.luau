@@ -4,7 +4,7 @@
 local Tutorial = {}
 
 Tutorial.Steps = {
-	{ event = "Gate", text = "Welcome to Crown Rush! Walk into the pink Candy Clouds gate.", target = "FirstGate" },
+	{ event = "Gate", text = "Only 1 player gets the crown, so warm up first! Walk into the pink Candy Clouds gate.", target = "FirstGate" },
 	{ event = "Course", text = "Pick Sugar Steps to play your first course.", target = nil },
 	{ event = "Finish", text = "Run to the finish! If you fall, you pop back at the last checkpoint.", target = nil },
 	{ event = "Queue", text = "Ready to race other players? Step on a glowing tournament pad.", target = "Pads" },

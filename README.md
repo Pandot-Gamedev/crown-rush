@@ -1,4 +1,6 @@
-# Crown Rush
+# Only 1 Gets the Crown!
+
+Called Crown Rush until 2026-10-30, when it was renamed to stand out in Roblox search (no other game uses the new name). The repo, file and code names keep the old name.
 
 A Roblox obstacle course game. Play Adventure courses on your own (five worlds,
 stars for finishing, beating par and finding 3 hidden gems), or jump into a

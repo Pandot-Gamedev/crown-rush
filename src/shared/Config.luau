@@ -2,7 +2,7 @@
 
 local Config = {}
 
-Config.GameName = "Crown Rush"
+Config.GameName = "Only 1 Gets the Crown!"
 
 -- Saving
 Config.DataStoreName = "PlayerData_v1"
