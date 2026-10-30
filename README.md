@@ -42,6 +42,8 @@ outside Roblox with a small stand-in for Roblox (`tools/check/mock.luau`):
 - `lune run tools/check/tournament.luau` plays a whole tournament: two pretend
   players and 10 bots, every round to the crown. Force the first rounds with
   `ROUNDS=door_dash,tile_fall,sweeper`.
+- `lune run tools/check/friends.luau` checks the friend coin bonus: friends in
+  one server both get it, strangers don't, and it ends when the friend leaves.
 
 ## Store art and the shop
 

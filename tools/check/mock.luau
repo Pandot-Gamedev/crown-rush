@@ -619,6 +619,9 @@ rawget(players, "_props").GetNameFromUserIdAsync = function(_, userId)
 	return "Player" .. userId
 end
 
+-- Pairs of user ids who are Roblox friends: Mock.Friends[a .. ":" .. b] = true
+Mock.Friends = {}
+
 -- A pretend player with a character standing at a position
 function Mock.AddPlayer(userId, name)
 	local player = Inst.new("Player")
@@ -629,6 +632,9 @@ function Mock.AddPlayer(userId, name)
 	props.CharacterAdded = signal()
 	props.Kick = function(_, reason)
 		print("KICKED: " .. tostring(reason))
+	end
+	props.IsFriendsWith = function(_, otherId)
+		return Mock.Friends[userId .. ":" .. otherId] or Mock.Friends[otherId .. ":" .. userId] or false
 	end
 	props.RequestStreamAroundAsync = function() end
 	props.LoadCharacter = function() end

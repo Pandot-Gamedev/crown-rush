@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local SocialService = game:GetService("SocialService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Level = require(Shared.Level)
@@ -124,7 +125,7 @@ function Hud.Init(screenGui)
 		"Frame",
 		UI.with({
 			Name = "Menu",
-			Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
+			Size = UI.Touch and UDim2.fromOffset(5 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
 			BackgroundTransparency = 1,
 			Parent = screenGui,
 		}, UI.side(166)),
@@ -148,6 +149,19 @@ function Hud.Init(screenGui)
 		})
 		shortcuts[info[4]] = info[2]
 	end
+	-- Roblox's own invite screen: friends get a notification to join you
+	UI.button(UI.Touch and "Invite" or "Invite friends", Color3.fromRGB(240, 170, 40), function()
+		local ok, canInvite = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
+		if ok and canInvite then
+			pcall(SocialService.PromptGameInvite, SocialService, player)
+		else
+			Notifications.Show("Invites aren't available on this account right now", "warning")
+		end
+	end, {
+		Size = UI.Touch and UDim2.fromOffset(100, 40) or UDim2.fromOffset(130, 42),
+		LayoutOrder = #buttons + 1,
+		Parent = menu,
+	})
 
 	-- On a course or in a tournament the course bar and its buttons take over
 	task.spawn(function()

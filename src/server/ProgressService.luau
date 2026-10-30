@@ -16,6 +16,7 @@ local Remotes = require(Shared.Remotes)
 
 local DataService = require(script.Parent.DataService)
 local ShopService = require(script.Parent.ShopService)
+local FriendService = require(script.Parent.FriendService)
 
 local ProgressService = {}
 
@@ -94,15 +95,20 @@ end
 --   quest = { key = amount } counted toward daily quests (defaults to stats),
 --   crowns = amount for the weekly crowns board,
 --   message = toast text (coins and XP are added to it), quiet = true for none }
--- Returns the coins (after the VIP bonus) and XP given.
+-- Returns the coins (after the VIP and friend bonuses) and XP given.
 function ProgressService.AddResult(player, result)
 	if not DataService.IsLoaded(player) then
 		return 0, 0
 	end
 	local coins = result.coins or 0
+	local bonus = 0
 	if ShopService.HasPass(player, "VIP") then
-		coins = math.floor(coins * (1 + Config.VipCoinBonus))
+		bonus += Config.VipCoinBonus
 	end
+	if FriendService.HasFriendHere(player) then
+		bonus += Config.FriendCoinBonus
+	end
+	coins = math.floor(coins * (1 + bonus))
 	local xp = result.xp or 0
 	DataService.Update(player, function(data)
 		data.coins += coins

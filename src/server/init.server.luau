@@ -12,6 +12,7 @@ local Rounds = require(Shared.Rounds)
 local MapBuilder = require(script.MapBuilder)
 local DataService = require(script.DataService)
 local ShopService = require(script.ShopService)
+local FriendService = require(script.FriendService)
 local CosmeticService = require(script.CosmeticService)
 local TutorialService = require(script.TutorialService)
 local ProgressService = require(script.ProgressService)
@@ -41,6 +42,7 @@ end
 
 -- Services that react to players loading must start before DataService
 ShopService.Start()
+FriendService.Start()
 CosmeticService.Start()
 TutorialService.Start()
 ProgressService.Start()
