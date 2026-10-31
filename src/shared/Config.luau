@@ -17,7 +17,7 @@ Config.AutosaveSeconds = 120
 -- Moving. Everyone runs and jumps the same: nothing sold changes this.
 Config.WalkSpeed = 20
 Config.JumpHeight = 7.5
-Config.DiveSpeed = 52 -- a forward lunge (Q / DIVE button) to reach a ledge or grab a gem
+Config.DiveSpeed = 52 -- a forward dash (Q / DASH button) to reach a ledge or grab a gem
 Config.DiveUp = 14
 Config.DiveCooldown = 1.2
 Config.CoyoteSeconds = 0.12 -- you can still jump this long after running off an edge (helps on phones)

@@ -1,5 +1,5 @@
 -- Dive, jump help, and the hammer swing in fight rounds.
---   Dive: Q, X on a controller, or the DIVE button on phones (TouchButtons).
+--   Dash: Q, X on a controller, or the DASH button on phones (TouchButtons).
 --         A quick forward lunge, once per jump, to reach a ledge or grab a gem.
 --   Jump help: you can still jump a moment after running off an edge, and a
 --         jump pressed just before landing still counts. Phones need this most.

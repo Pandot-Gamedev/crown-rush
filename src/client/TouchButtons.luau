@@ -1,6 +1,6 @@
--- Big round DIVE and BONK buttons for phones and tablets, placed around
--- Roblox's own jump button so the right thumb can reach all three. DIVE sits
--- just left of jump (jump, then slide over to dive); BONK sits above jump and
+-- Big round DASH and BONK buttons for phones and tablets, placed around
+-- Roblox's own jump button so the right thumb can reach all three. DASH sits
+-- just left of jump (jump, then slide over to dash); BONK sits above jump and
 -- only shows while you hold a foam hammer. They fill up from the bottom while
 -- the move recharges. Hold BONK to keep swinging.
 -- They live inside Roblox's touch controls, so they hide whenever those hide.
@@ -19,7 +19,7 @@ local player = Players.LocalPlayer
 
 -- size and offset are in jump-button sizes, measured from the jump button's center
 local LAYOUT = {
-	dive = { text = "DIVE", color = Color3.fromRGB(60, 170, 255), size = 1.05, offset = Vector2.new(-1.3, -0.15) },
+	dive = { text = "DASH", color = Color3.fromRGB(60, 170, 255), size = 1.05, offset = Vector2.new(-1.3, -0.15) },
 	bonk = { text = "BONK", color = Color3.fromRGB(255, 90, 60), size = 1.25, offset = Vector2.new(-0.35, -1.4) },
 }
 

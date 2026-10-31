@@ -3,14 +3,17 @@
 -- time runs out:
 --   objective  the top scores go through (gems, tails, time on the hill)
 --   team       the runners are split into teams; the team with the fewest
---              points is out (with 9 runners: 3 teams of 3, with 6: 2 of 3)
+--              points is out (with 9 runners: 3 teams of 3, with 6: 2 of 3),
+--              except its top scorer, who is saved. So what you do counts.
 --
 -- Arenas:
 --   gems   Gem Grab: grab gems; bonked runners drop some of theirs
 --   tails  Tail Tag: grab a tail from whoever has one; tails at the end go through
 --   hill   King of the Hill: score while standing on the hill, bonk others off
---   eggs   Egg Scramble (team): carry eggs to your nest, steal from the others
---   ball   Ball Rush (team): push the giant ball into the other teams' goals
+--   eggs   Egg Scramble (team): carry eggs to your nest, steal from the others.
+--          Carrying slows you down; a bonk or a dash into a carrier knocks it loose.
+--   ball   Ball Rush (team): kick the giant ball into the other teams' goals.
+--          Run into it to kick it the way you're going; dash into it for a big kick.
 
 local Workspace = game:GetService("Workspace")
 
@@ -30,6 +33,16 @@ local ROOT_HEIGHT = ArenaKit.ROOT_HEIGHT
 local flat, part, rootOf = ArenaKit.flat, ArenaKit.part, ArenaKit.rootOf
 local random = Random.new()
 local RESPAWN_SECONDS = 1.5
+local DASH_SECONDS = 0.6 -- how long after pressing DASH a runner counts as dashing
+
+-- When each player last dashed (Controls tells the server)
+local dashedAt = setmetatable({}, { __mode = "k" })
+Remotes.Dive.OnServerEvent:Connect(function(player)
+	dashedAt[player] = os.clock()
+end)
+local function dashing(entrant)
+	return entrant.player ~= nil and os.clock() - (dashedAt[entrant.player] or -100) < DASH_SECONDS
+end
 
 local TEAMS = {
 	{ name = "Red", color = Color3.fromRGB(235, 70, 70) },
@@ -321,7 +334,7 @@ Arenas.tails = function(arena, world)
 						holder ~= grabber
 						and (immune[holder] or 0) < now
 						and root
-						and near(holder, root.Position, 4, 5)
+						and near(holder, root.Position, dashing(grabber) and 6.5 or 4, 5) -- a dash reaches further
 					then
 						takeTail(holder)
 						giveTail(grabber)
@@ -483,6 +496,7 @@ Arenas.eggs = function(arena, world)
 	ArenaKit.disc(arena, radius, 0, world.floor[1], world.material)
 	arena.killY = center.Y - 25
 	arena.label = "eggs"
+	arena.unit = "eggs"
 
 	-- Nests round the edge, one per team
 	local nests = {}
@@ -564,7 +578,12 @@ Arenas.eggs = function(arena, world)
 		weld.Part0 = root
 		weld.Part1 = egg.part
 		weld.Parent = egg.part
-		round:You(entrant, "Got one! Take it to your nest")
+		local humanoid = entrant.player
+			and entrant.player.Character
+			and entrant.player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.WalkSpeed = Config.WalkSpeed * 0.8 -- eggs are heavy
+		end
 		recount()
 	end
 	local function putDown(entrant, state, at, team)
@@ -573,6 +592,12 @@ Arenas.eggs = function(arena, world)
 			return
 		end
 		carrying[entrant] = nil
+		local humanoid = entrant.player
+			and entrant.player.Character
+			and entrant.player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.WalkSpeed > 0 then
+			humanoid.WalkSpeed = Config.WalkSpeed
+		end
 		local weld = egg.part:FindFirstChild("Carry")
 		if weld then
 			weld:Destroy()
@@ -594,6 +619,20 @@ Arenas.eggs = function(arena, world)
 	end
 
 	function arena.update(standing)
+		-- A dash into a rival carrier knocks their egg loose
+		for _, entrant in ipairs(standing) do
+			if dashing(entrant) then
+				for carrier in pairs(carrying) do
+					if round.teamOf[carrier] ~= round.teamOf[entrant] then
+						local root = rootOf(carrier)
+						if root and near(entrant, root.Position, 5, 6) then
+							putDown(carrier, "loose", Vector3.new(root.Position.X, center.Y, root.Position.Z))
+							round:You(entrant, "Knocked their egg loose! Grab it")
+						end
+					end
+				end
+			end
+		end
 		for _, entrant in ipairs(standing) do
 			local team = round.teamOf[entrant]
 			local egg = carrying[entrant]
@@ -606,7 +645,6 @@ Arenas.eggs = function(arena, world)
 						team
 					)
 					round:AddScore(entrant, 1)
-					round:You(entrant, "Egg in the nest! Get another")
 					Remotes.Effect:FireAllClients("gem", nests[team] + Vector3.new(0, 2, 0), { quiet = true })
 				end
 			else
@@ -691,6 +729,7 @@ Arenas.ball = function(arena, world)
 	ArenaKit.disc(arena, radius + 8, 0, world.floor[1], world.material)
 	arena.killY = center.Y - 25
 	arena.label = "goals let in"
+	arena.unit = "goals"
 
 	local goalAngles = {}
 	for index, team in ipairs(round.teams) do
@@ -747,6 +786,8 @@ Arenas.ball = function(arena, world)
 	end
 	show()
 	local conceded = {}
+	local lastKick = {} -- [entrant] = when they last kicked
+	local kicker = nil -- who touched the ball last
 	for _, team in ipairs(round.teams) do
 		conceded[team] = 0
 		round:SetTeamScore(team, 0)
@@ -756,21 +797,40 @@ Arenas.ball = function(arena, world)
 		if os.clock() < pausedUntil then
 			return
 		end
-		-- Runners touching the ball push it away from them
+		-- Running into the ball kicks it the way you're going (mostly), a
+		-- dash kicks it hard. Each runner can kick about twice a second.
+		local now = os.clock()
 		for _, entrant in ipairs(standing) do
 			local root = rootOf(entrant)
-			if root then
+			if root and now - (lastKick[entrant] or 0) > 0.45 then
 				local offset = flat(position - root.Position)
-				if offset.Magnitude < ballRadius + 2.6 and root.Position.Y < position.Y + ballRadius * 2 + 2 then
-					local direction = offset.Magnitude > 0.1 and offset.Unit or Vector3.xAxis
-					velocity += direction * 70 * dt
+				if offset.Magnitude < ballRadius + 2.8 and root.Position.Y < position.Y + ballRadius * 2 + 2 then
+					local away = offset.Magnitude > 0.1 and offset.Unit or Vector3.xAxis
+					local heading = entrant.player and flat(root.AssemblyLinearVelocity) or Vector3.zero
+					if heading.Magnitude < 4 then
+						heading = flat(root.CFrame.LookVector)
+					end
+					heading = heading.Magnitude > 0.1 and heading.Unit or away
+					-- Can't kick it backwards through yourself
+					local direction = (heading * 0.65 + away * 0.35)
+					direction = direction.Magnitude > 0.1 and direction.Unit or away
+					if direction:Dot(away) < 0.2 then
+						direction = away
+					end
+					local power = dashing(entrant) and 46 or 28
+					velocity = direction * math.max(power, velocity.Magnitude * 0.5)
+					lastKick[entrant] = now
+					kicker = entrant
+					if dashing(entrant) then
+						Remotes.Effect:FireAllClients("ko", position + Vector3.new(0, ballRadius, 0))
+					end
 				end
 			end
 		end
-		if velocity.Magnitude > 32 then
-			velocity = velocity.Unit * 32
+		if velocity.Magnitude > 46 then
+			velocity = velocity.Unit * 46
 		end
-		velocity *= math.max(0, 1 - 0.7 * dt)
+		velocity *= math.max(0, 1 - 0.8 * dt)
 		position += velocity * dt
 		if velocity.Magnitude > 0.1 then
 			local axis = velocity.Unit:Cross(-Vector3.yAxis)
@@ -784,7 +844,15 @@ Arenas.ball = function(arena, world)
 			if team and fromCenter.Magnitude > radius + 1 then
 				conceded[team] += 1
 				round:SetTeamScore(team, -conceded[team])
-				round:Announce(string.format("GOAL! %s let one in", team.name))
+				-- The last one to kick it scores (not into their own goal)
+				local scorer = kicker and round.teamOf[kicker] ~= team and kicker or nil
+				if scorer then
+					round:AddScore(scorer, 1)
+					round:Announce(string.format("GOAL by %s! %s let one in", scorer.name, team.name))
+				else
+					round:Announce(string.format("GOAL! %s let one in", team.name))
+				end
+				kicker = nil
 				Remotes.Effect:FireAllClients("finish", position + Vector3.new(0, ballRadius, 0), {})
 				position, velocity = center, Vector3.zero
 				pausedUntil = os.clock() + 2
@@ -1033,6 +1101,22 @@ function GameRound:StatusText()
 	return string.format("Top %d go through  -  %s", self.keep, table.concat(parts, ", "))
 end
 
+-- A team's top scorer, if one scored more than the rest of the team
+function GameRound:TopOfTeam(team)
+	local best, bestScore, tied = nil, 0, false
+	for _, entrant in ipairs(team.members) do
+		if not entrant.left then
+			local score = self.scores[entrant] or 0
+			if score > bestScore then
+				best, bestScore, tied = entrant, score, false
+			elseif score == bestScore and score > 0 then
+				tied = true
+			end
+		end
+	end
+	return not tied and best or nil
+end
+
 -- Everyone still here, best first
 function GameRound:Ranking()
 	local list = {}
@@ -1139,14 +1223,12 @@ function GameRound:Play()
 		end
 	end
 	local endsAt = Workspace:GetServerTimeNow() + self.round.seconds
-	local goal = self.teams and "The team with the fewest is out!" or string.format("Top %d go through!", self.keep)
+	local goal = self.teams and "Fewest is out, but its top scorer is saved!"
+		or string.format("Top %d go through!", self.keep)
 	t:Announce("timer", { endsAt = endsAt, text = goal })
 	for _, entrant in ipairs(self.entrants) do
 		if entrant.bot then
 			self:StartBot(entrant)
-		end
-		if self.teams then
-			self:You(entrant, "You're on the " .. self.teamOf[entrant].name .. " team")
 		end
 	end
 
@@ -1171,7 +1253,25 @@ function GameRound:Play()
 		end
 		arena.update(self:Standing(), dt)
 		t:Status(self:StatusText())
-		if not self.teams then
+		if self.teams then
+			for _, entrant in ipairs(self.entrants) do
+				if entrant.player and not entrant.left then
+					local best = self:TopOfTeam(self.teamOf[entrant])
+					local mine = self.scores[entrant] or 0
+					local unit = arena.unit or "points"
+					self:You(
+						entrant,
+						string.format(
+							"%s team  -  you: %d %s  -  %s",
+							self.teamOf[entrant].name,
+							mine,
+							unit,
+							best == entrant and "team's top scorer, you're safe!" or "top scorer is safe"
+						)
+					)
+				end
+			end
+		else
 			for place, entrant in ipairs(self:Ranking()) do
 				if entrant.player and arena.label ~= "tail" then
 					self:You(
@@ -1205,9 +1305,15 @@ function GameRound:Play()
 		end
 		local loser = losers[random:NextInteger(1, #losers)]
 		self.loser = loser
-		t:Announce("flash", { text = loser.name .. " team is out!" })
+		-- The losing team's top scorer is saved
+		local saved = self:TopOfTeam(loser)
+		self.saved = saved
+		t:Announce("flash", {
+			text = loser.name .. " team is out!" .. (saved and ("  " .. saved.name .. " is saved") or ""),
+		})
 		for _, entrant in ipairs(self:Ranking()) do
-			table.insert(self.teamOf[entrant] == loser and eliminated or qualified, entrant)
+			local out = self.teamOf[entrant] == loser and entrant ~= saved
+			table.insert(out and eliminated or qualified, entrant)
 		end
 	else
 		for index, entrant in ipairs(self:Ranking()) do

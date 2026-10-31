@@ -282,6 +282,8 @@ local function run(t)
 			break
 		end
 		t.match = match
+		-- Everyone stands still from the moment they're placed until GO
+		t:Freeze(alive, true)
 		t:Announce("intro", {
 			number = number,
 			total = #t.plan,
@@ -419,10 +421,12 @@ local function start(pad, players)
 		player:SetAttribute("InTournament", t.id)
 		table.insert(t.entrants, { player = player, name = player.DisplayName, alive = true })
 	end
-	-- Bots fill the rest: mostly mid-skill, a couple of sharp ones
+	-- Bots fill the rest: a few sharp ones, some average and some clumsy, so
+	-- there's always someone to beat and someone to chase
 	local holding = arenaOrigin(t) * CFrame.new(0, -200, 0)
-	while #t.entrants < Rounds.Players do
-		local bot = BotService.Create(holding, random:NextNumber(0.45, 1))
+	local skills = BotService.SkillMix(Rounds.Players - #t.entrants, random)
+	for _, skill in ipairs(skills) do
+		local bot = BotService.Create(holding, skill)
 		table.insert(t.entrants, { bot = bot, name = bot.name, alive = true })
 	end
 	t:Announce("start", {

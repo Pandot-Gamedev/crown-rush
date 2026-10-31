@@ -121,6 +121,30 @@ function Piece:Disc(x, y, z, radius, props)
 	return p
 end
 
+-- A glowing frame round the top edge of a floor slab (see Floor), so a
+-- platform floating over a drop stands out from the sky behind it
+function Piece:Trim(x, y, z, w, l, color)
+	local thickness = 0.5
+	local edges = {
+		{ 0, z - l / 2 + thickness / 2, w, thickness },
+		{ 0, z + l / 2 - thickness / 2, w, thickness },
+		{ -w / 2 + thickness / 2, z, thickness, l },
+		{ w / 2 - thickness / 2, z, thickness, l },
+	}
+	for _, edge in ipairs(edges) do
+		self:Part({
+			Name = "Trim",
+			Size = Vector3.new(edge[3], 0.3, edge[4]),
+			CFrame = self:C(x + edge[1], y + 0.15, edge[2]),
+			Color = color or self.theme.edge,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+		})
+	end
+end
+
 -- A low glowing rim along both sides of a stretch of path, for looks
 function Piece:Rails(y, z0, z1, w)
 	for _, side in ipairs({ -1, 1 }) do
@@ -423,7 +447,10 @@ B.gaps = function(pc, o)
 			x = 0
 		end
 		local y = (o.climb or 0) * index
-		pc:Floor(x, y, z + size / 2, size, size)
+		-- Bright stones that stand out from the sky (darker every other one)
+		local stone = pc.theme.stone or pc.theme.accent
+		pc:Floor(x, y, z + size / 2, size, size, { Color = index % 2 == 0 and stone:Lerp(Color3.new(), 0.18) or stone })
+		pc:Trim(x, y, z + size / 2, size, size)
 		pc:Jump(x, y, z + size / 2, { risk = 0.04 })
 		lastX = x
 		z += size
@@ -431,6 +458,7 @@ B.gaps = function(pc, o)
 	z += gap
 	local endY = (o.climb or 0) * count
 	pc:Floor(0, endY, z + 3, w, 6)
+	pc:Trim(0, endY, z + 3, w, 6)
 	pc:Jump(lastX * 0.5, endY, z + 3)
 	if o.gem then
 		pc:Floor(w / 2 + (o.gemOut or 6), endY, z - size / 2 - gap, 5, 5, { Color = pc.theme.accent })
@@ -843,21 +871,55 @@ B.wind = function(pc, o)
 	return pc:Done(l)
 end
 
--- A slime slide down a slope: it carries you fast; steer round the bumpers
+-- A slime slide down a slope: it carries you fast; steer round the bumpers.
+-- holes = n: stretches where half the slide is missing (sides take turns), so
+-- you have to steer to the other half in time. sweepers = n: low pucks that
+-- slide across and knock you sideways (jump them or go round).
 B.slide = function(pc, o)
 	local l, drop, w = o.len or 70, o.drop or 24, o.w or 18
 	local angle = math.atan2(-drop, l)
+	local grade = drop / l
+	local belt = (pc.cursor * CFrame.Angles(angle, 0, 0)).LookVector * (o.speed or 22)
+	local function y(z)
+		return -grade * z
+	end
+	local function slab(x, width, z0, z1)
+		local length = (z1 - z0) * math.sqrt(1 + grade * grade)
+		local z = (z0 + z1) / 2
+		local surface = pc:Part({
+			Name = "Slide",
+			Size = Vector3.new(width, 2, length),
+			CFrame = pc:C(x, y(z), z) * CFrame.Angles(angle, 0, 0) * CFrame.new(0, -1, 0),
+			Color = Color3.fromRGB(120, 230, 120),
+			Material = Enum.Material.Glass,
+			Transparency = 0.15,
+			Tags = { "Belt" },
+		})
+		surface:SetAttribute("Belt", belt)
+	end
+	local holeLength = o.holeLength or 10
+	local holes = {}
+	for index = 1, o.holes or 0 do
+		local z = l * index / ((o.holes or 0) + 1)
+		table.insert(holes, { z0 = z - holeLength / 2, z1 = z + holeLength / 2, side = index % 2 == 0 and 1 or -1 })
+	end
+	local function nearHole(z, margin)
+		for _, hole in ipairs(holes) do
+			if z > hole.z0 - margin and z < hole.z1 + margin then
+				return true
+			end
+		end
+		return false
+	end
+	local z = 0
+	for _, hole in ipairs(holes) do
+		slab(0, w, z, hole.z0)
+		-- Only the half away from the hole is left
+		slab(-hole.side * w / 4, w / 2, hole.z0, hole.z1)
+		z = hole.z1
+	end
+	slab(0, w, z, l)
 	local slope = math.sqrt(l * l + drop * drop)
-	local surface = pc:Part({
-		Name = "Slide",
-		Size = Vector3.new(w, 2, slope),
-		CFrame = pc:C(0, -drop / 2, l / 2) * CFrame.Angles(angle, 0, 0) * CFrame.new(0, -1, 0),
-		Color = Color3.fromRGB(120, 230, 120),
-		Material = Enum.Material.Glass,
-		Transparency = 0.15,
-		Tags = { "Belt" },
-	})
-	surface:SetAttribute("Belt", (pc.cursor * CFrame.Angles(angle, 0, 0)).LookVector * (o.speed or 22))
 	for _, side in ipairs({ -1, 1 }) do
 		pc:Part({
 			Name = "SlideWall",
@@ -867,21 +929,55 @@ B.slide = function(pc, o)
 		})
 	end
 	pc.minY = math.min(pc.minY, pc:P(0, -drop, 0).Y)
-	-- Bumpers to steer round
+	-- Bumpers to steer round (none next to a hole)
 	local bumpers = o.bumpers or 4
 	for index = 1, bumpers do
 		local share = index / (bumpers + 1)
-		local x = (index % 2 == 0 and 1 or -1) * (w / 4)
-		pc:Part({
-			Name = "Bumper",
-			Shape = Enum.PartType.Cylinder,
-			Size = Vector3.new(6, 4, 4),
-			CFrame = pc:C(x, -drop * share + 2, l * share) * UPRIGHT,
-			Color = pc.theme.hazard,
-			Material = Enum.Material.SmoothPlastic,
-		})
+		if not nearHole(l * share, 4) then
+			local x = (index % 2 == 0 and 1 or -1) * (w / 4)
+			pc:Part({
+				Name = "Bumper",
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(6, 4, 4),
+				CFrame = pc:C(x, -drop * share + 2, l * share) * UPRIGHT,
+				Color = pc.theme.hazard,
+				Material = Enum.Material.SmoothPlastic,
+			})
+		end
 	end
-	pc:Node({ kind = "slide", from = pc:P(0, 0, 0), to = pc:P(0, -drop, l), dodge = w / 4 })
+	-- Sweepers: halfway between holes (or spread out when there are none)
+	local sweepers = o.sweepers or 0
+	for index = 1, sweepers do
+		local zs = l * (index - 0.5) / sweepers
+		if nearHole(zs, 2) then
+			zs += holeLength
+		end
+		zs = math.clamp(zs, 6, l - 6)
+		pc:Mover({
+			Name = "Sweeper",
+			Size = Vector3.new(4, 2.4, 2.4),
+			Color = pc.theme.hazard,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Attributes = { Low = true },
+		}, {
+			Motion = "slide",
+			Home = pc:C(-(w / 2 - 2.5), y(zs) + 1.2, zs),
+			Axis = Vector3.xAxis,
+			Dist = w - 5,
+			Period = o.sweepPeriod or 2.8,
+			Phase = index * 1.3,
+			Hold = 0.1,
+		}, { "Hit" })
+	end
+	-- Bots steer to the open half before each hole
+	local across = pc.cursor.RightVector
+	for _, hole in ipairs(holes) do
+		local x = -hole.side * w / 4
+		pc:Node({ kind = "slide", to = pc:P(x, y(hole.z0 - 5), hole.z0 - 5), dodge = 1.5, across = across })
+		pc:Node({ kind = "slide", to = pc:P(x, y(hole.z1 + 2), hole.z1 + 2), dodge = 0, across = across })
+	end
+	pc:Node({ kind = "slide", from = pc:P(0, 0, 0), to = pc:P(0, -drop, l), dodge = w / 4, across = across })
 	pc:Floor(0, -drop, l + 5, w, 10)
 	pc:Go(0, -drop, l + 8)
 	if o.gem then

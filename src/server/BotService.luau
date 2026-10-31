@@ -1,7 +1,9 @@
 -- Bots fill the empty spots in a tournament so nobody waits for players.
 -- They always try their best: they run the course's real path, time laser
--- gates, ride moving platforms and pick doors. But they run a little slower
--- than you, can get knocked by spinners and hammers, and fall like anyone else.
+-- gates, ride moving platforms and pick doors. But they run slower than you,
+-- can get knocked by spinners and hammers, and fall like anyone else. Each bot
+-- has a skill: sharp bots rarely slip, clumsy ones hesitate, mistime gaps and
+-- miss jumps (see BotService.SkillMix).
 -- Their name tags say BOT, and they never take a real player's spot: they only
 -- fill what's left when a tournament starts.
 --
@@ -212,7 +214,7 @@ function BotService.Create(cframe, skill)
 		root = root,
 		humanoid = humanoid,
 		skill = skill,
-		speed = Config.WalkSpeed * (0.8 + 0.17 * skill), -- 16 to 19.4, players run at 20
+		speed = Config.WalkSpeed * (0.7 + 0.2 * skill), -- 14 to 18, players run at 20
 		thread = nil,
 		playing = nil,
 	}
@@ -220,6 +222,29 @@ function BotService.Create(cframe, skill)
 	BotService.Animate(bot, "idle")
 	CosmeticService.Tag(model, { name = name, nameColor = Color3.fromRGB(210, 210, 210), subtitle = "BOT" })
 	return bot
+end
+
+-- Skills for a tournament's bots: about a fifth sharp, two fifths average and
+-- the rest clumsy, shuffled
+function BotService.SkillMix(count, rng)
+	rng = rng or random
+	local sharp = count > 0 and math.max(1, math.floor(count * 0.2 + 0.5)) or 0
+	local average = math.floor(count * 0.4 + 0.5)
+	local list = {}
+	for index = 1, count do
+		if index <= sharp then
+			table.insert(list, rng:NextNumber(0.8, 0.95))
+		elseif index <= sharp + average then
+			table.insert(list, rng:NextNumber(0.5, 0.7))
+		else
+			table.insert(list, rng:NextNumber(0.15, 0.35))
+		end
+	end
+	for index = #list, 2, -1 do
+		local other = rng:NextInteger(1, index)
+		list[index], list[other] = list[other], list[index]
+	end
+	return list
 end
 
 function BotService.Remove(bot)
@@ -650,7 +675,23 @@ end
 local function follow(bot, _run, node)
 	local kind = node.kind
 	local now = Motion.Clock
+	local skill = bot.skill or 0.5
+	-- Clumsy bots stop to look around now and then
+	if kind ~= "ride" and random:NextNumber() < (1 - skill) * 0.3 then
+		BotService.Wait(bot, random:NextNumber(0.3, 1) * (1.5 - skill))
+	end
 	if kind == "jump" then
+		if random:NextNumber() < (node.risk or 0.02) + (1 - skill) * 0.12 then
+			-- A miss: jumps short and a little wide, and falls
+			local from = bot.root.Position
+			local along = flat(node.to - from)
+			if along.Magnitude > 4 then
+				local across = Vector3.new(-along.Unit.Z, 0, along.Unit.X)
+				local short = node.to - along.Unit * random:NextNumber(6, 8) + across * random:NextNumber(-2.5, 2.5)
+				BotService.JumpTo(bot, short, 1.5)
+				return
+			end
+		end
 		BotService.JumpTo(bot, node.to, 3)
 	elseif kind == "bounce" then
 		BotService.JumpTo(bot, node.to, 9, bot.speed * 1.3)
@@ -669,9 +710,10 @@ local function follow(bot, _run, node)
 		end
 		BotService.JumpTo(bot, node.to, 2)
 	elseif kind == "slide" then
+		local across = node.across or Vector3.xAxis
 		BotService.RunTo(
 			bot,
-			node.to + Vector3.new(random:NextNumber(-node.dodge, node.dodge), ROOT_HEIGHT, 0),
+			node.to + across * random:NextNumber(-node.dodge, node.dodge) + Vector3.new(0, ROOT_HEIGHT, 0),
 			bot.speed * 1.4,
 			2
 		)

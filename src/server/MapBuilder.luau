@@ -491,7 +491,7 @@ function MapBuilder.Build()
 		"HowTo"
 	)
 	local howToText =
-		"HOW TO PLAY\n\nAdventure: walk into a world gate\nTournament: step on a glowing pad\n\nRun, jump (Space) and dive (Q)\nGet stars and find hidden gems\nWin tournaments for crowns!"
+		"HOW TO PLAY\n\nAdventure: walk into a world gate\nTournament: step on a glowing pad\n\nRun, jump (Space) and dash (Q)\nGet stars and find hidden gems\nWin tournaments for crowns!"
 	bothSides(howTo, howToText, Color3.fromRGB(255, 240, 200), 30)
 
 	local title = part({

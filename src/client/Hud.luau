@@ -154,6 +154,8 @@ function Hud.Init(screenGui)
 		while true do
 			local busy = RunHud.IsOnCourse() or player:GetAttribute("InTournament") ~= nil
 			menu.Visible = not busy
+			-- Keep the screen clear in a tournament
+			stats.Visible = player:GetAttribute("InTournament") == nil
 			local pad = player:GetAttribute("QueuePad")
 			queueBanner.Visible = pad ~= nil and not busy
 			startNow.Visible = queueBanner.Visible and isOwner()

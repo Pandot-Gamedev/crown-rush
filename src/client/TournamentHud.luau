@@ -153,38 +153,45 @@ end
 
 ------------------------------------------------------------------ Building
 local function build(screenGui)
-	-- Round bar, top center
+	-- Round bar, top center: kept small so it doesn't cover the course.
+	-- Round name on the left and the timer on the right, then the status line.
 	roundBar = UI.new("Frame", {
 		Name = "RoundBar",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 10),
-		Size = UDim2.fromOffset(440, 96),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(400, 56),
 		BackgroundColor3 = T.Background,
-		BackgroundTransparency = 0.15,
+		BackgroundTransparency = 0.3,
 		Visible = false,
 		Parent = screenGui,
-	}, { UI.corner(14), UI.stroke(T.Gold, 2) })
-	-- Your own line (score, team, tail) under the status, when a round has one
-	roundYou = UI.label("", {
-		Position = UDim2.fromOffset(14, 90),
-		Size = UDim2.new(1, -28, 0, 20),
-		TextColor3 = T.Text,
-		Visible = false,
-		Parent = roundBar,
-	})
+	}, { UI.corner(12), UI.stroke(T.Gold, 1.5) })
 	roundTitle = UI.label("", {
-		Position = UDim2.fromOffset(14, 6),
-		Size = UDim2.new(1, -28, 0, 20),
+		Position = UDim2.fromOffset(12, 5),
+		Size = UDim2.new(1, -90, 0, 22),
 		TextColor3 = T.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = roundBar,
 	})
-	roundTimer =
-		UI.label("", { Position = UDim2.fromOffset(14, 28), Size = UDim2.new(1, -28, 0, 36), Parent = roundBar })
+	roundTimer = UI.label("", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 3),
+		Size = UDim2.fromOffset(70, 26),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Parent = roundBar,
+	})
 	roundStatus = UI.label("", {
-		Position = UDim2.fromOffset(14, 68),
-		Size = UDim2.new(1, -28, 0, 20),
+		Position = UDim2.fromOffset(12, 31),
+		Size = UDim2.new(1, -24, 0, 18),
 		Font = T.BodyFont,
 		TextColor3 = T.Muted,
+		Parent = roundBar,
+	})
+	-- Your own line (score, team, tail) under the status, when a round has one
+	roundYou = UI.label("", {
+		Position = UDim2.fromOffset(12, 52),
+		Size = UDim2.new(1, -24, 0, 18),
+		TextColor3 = T.Text,
+		Visible = false,
 		Parent = roundBar,
 	})
 
@@ -192,39 +199,40 @@ local function build(screenGui)
 	introCard = UI.new("Frame", {
 		Name = "RoundIntro",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.42),
-		Size = UDim2.fromOffset(520, 230),
+		Position = UDim2.fromScale(0.5, 0.36),
+		Size = UDim2.fromOffset(460, 196),
 		BackgroundColor3 = T.Panel,
 		Visible = false,
 		Parent = screenGui,
 	}, { UI.corner(18), UI.stroke(T.Gold, 3), UI.padding(16), UI.list(8), UI.new("UIScale") })
-	introKind = UI.label("", { Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 1, Parent = introCard })
-	introName = UI.label("", { Size = UDim2.new(1, 0, 0, 56), LayoutOrder = 2, Parent = introCard })
+	introKind = UI.label("", { Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 1, Parent = introCard })
+	introName = UI.label("", { Size = UDim2.new(1, 0, 0, 46), LayoutOrder = 2, Parent = introCard })
 	introBlurb = UI.label("", {
-		Size = UDim2.new(1, 0, 0, 48),
+		Size = UDim2.new(1, 0, 0, 44),
 		Font = T.BodyFont,
 		TextWrapped = true,
 		LayoutOrder = 3,
 		Parent = introCard,
 	})
 	introKeep =
-		UI.label("", { Size = UDim2.new(1, 0, 0, 30), TextColor3 = T.Gold, LayoutOrder = 4, Parent = introCard })
+		UI.label("", { Size = UDim2.new(1, 0, 0, 26), TextColor3 = T.Gold, LayoutOrder = 4, Parent = introCard })
 
 	-- 3-2-1-GO
 	countdownLabel = UI.label("", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.4),
-		Size = UDim2.fromOffset(300, 160),
+		Position = UDim2.fromScale(0.5, 0.35),
+		Size = UDim2.fromOffset(220, 120),
 		TextStrokeTransparency = 0,
 		Visible = false,
 		Parent = screenGui,
 	})
 
 	-- Banners: QUALIFIED!, OUT!, the winner
+	-- Banners sit high, above the runner, and go quickly
 	banner = UI.label("", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.3),
-		Size = UDim2.fromOffset(640, 90),
+		Position = UDim2.fromScale(0.5, 0.24),
+		Size = UDim2.fromOffset(560, 64),
 		TextStrokeTransparency = 0,
 		Visible = false,
 		Parent = screenGui,
@@ -232,8 +240,8 @@ local function build(screenGui)
 	UI.new("UIScale", { Parent = banner })
 	bannerSub = UI.label("", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.3, 50),
-		Size = UDim2.fromOffset(560, 32),
+		Position = UDim2.new(0.5, 0, 0.24, 36),
+		Size = UDim2.fromOffset(500, 26),
 		Font = T.Font,
 		TextStrokeTransparency = 0.3,
 		Visible = false,
@@ -375,15 +383,12 @@ local handlers = {}
 function handlers.start(info)
 	closeEnd()
 	local bots = info.bots > 0 and string.format(" and %d bots", info.bots) or ""
-	Notifications.Show(
-		string.format("Tournament on! %d players%s. Rounds: %s", info.players, bots, table.concat(info.rounds, ", ")),
-		"info"
-	)
+	Notifications.Show(string.format("Tournament on! %d players%s", info.players, bots), "info")
 end
 
 function handlers.intro(info)
 	endsAt = nil
-	roundText = string.format("Round %d of %d  -  %s", info.number, info.total, info.name)
+	roundText = string.format("Round %d/%d  -  %s", info.number, info.total, info.name)
 	roundStatus.Text = ""
 	roundYou.Text = ""
 	roundYou.Visible = false
@@ -413,11 +418,11 @@ function handlers.team(info)
 	roundYou.Text = "You're on the " .. info.name .. " team"
 	roundYou.TextColor3 = info.color
 	roundYou.Visible = true
-	showBanner(string.upper(info.name) .. " TEAM", "Work together! The team with the fewest is out", info.color, 4)
+	showBanner(string.upper(info.name) .. " TEAM", "Score the most on your team to be safe!", info.color, 3)
 end
 
 function handlers.flash(info)
-	showBanner(info.text, nil, T.Gold, 2.5)
+	showBanner(info.text, nil, T.Gold, 2)
 end
 
 function handlers.countdown(info)
@@ -438,7 +443,7 @@ end
 
 function handlers.qualified(info)
 	local timeText = info.time and string.format("  (%.2fs)", info.time) or ""
-	showBanner("QUALIFIED!", ordinal(info.place) .. timeText, T.Good, 3)
+	showBanner("QUALIFIED!", ordinal(info.place) .. timeText, T.Good, 2.5)
 	Effects.Sound("ding")
 end
 
@@ -448,7 +453,7 @@ function handlers.crown(_info)
 end
 
 function handlers.out(info)
-	showBanner("OUT!", string.format("%s place. Watch from the stands", ordinal(info.place)), T.Bad, 3)
+	showBanner("OUT!", string.format("%s place. Watch from the stands", ordinal(info.place)), T.Bad, 2.5)
 	Effects.Sound("fall")
 end
 
@@ -508,7 +513,7 @@ function TournamentHud.Init(screenGui)
 		leaveButton.Visible = inTournament
 		watchBar.Visible = watching and not inTournament and not endCard.Visible
 		roundTitle.Text = roundText
-		roundBar.Size = UDim2.fromOffset(440, roundYou.Visible and 116 or 96)
+		roundBar.Size = UDim2.fromOffset(400, roundYou.Visible and 74 or 56)
 		local now = Workspace:GetServerTimeNow()
 
 		if endsAt then

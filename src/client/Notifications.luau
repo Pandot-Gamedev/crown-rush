@@ -1,5 +1,6 @@
 -- Small messages that pop up on the right side of the screen.
 
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -41,8 +42,10 @@ function Notifications.Show(text, kind)
 	if not container then
 		return
 	end
+	-- In a tournament: smaller and fewer, so they don't cover the course
+	local busy = Players.LocalPlayer:GetAttribute("InTournament") ~= nil
 	local toast = UI.new("TextLabel", {
-		Size = UDim2.new(1, 0, 0, 44),
+		Size = UDim2.new(1, 0, 0, busy and 32 or 44),
 		BackgroundColor3 = T.Background,
 		BackgroundTransparency = 0.1,
 		Text = text,
@@ -53,7 +56,7 @@ function Notifications.Show(text, kind)
 		Parent = container,
 	}, { UI.corner(10), UI.padding(6) })
 
-	task.delay(4, function()
+	task.delay(busy and 2.5 or 4, function()
 		local tween =
 			TweenService:Create(toast, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 })
 		tween:Play()
@@ -61,15 +64,15 @@ function Notifications.Show(text, kind)
 		toast:Destroy()
 	end)
 
-	-- Keep at most 6 on screen
+	-- Keep at most 6 on screen (2 in a tournament)
 	local toasts = {}
 	for _, child in ipairs(container:GetChildren()) do
 		if child:IsA("TextLabel") then
 			table.insert(toasts, child)
 		end
 	end
-	if #toasts > 6 then
-		toasts[1]:Destroy()
+	for index = 1, #toasts - (busy and 2 or 6) do
+		toasts[index]:Destroy()
 	end
 end
 

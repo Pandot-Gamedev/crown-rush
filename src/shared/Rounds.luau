@@ -7,7 +7,7 @@
 --   "survival"  stay on the arena; the last ones standing go through
 --   "fight"     a survival round with foam hammers: bonk rivals off
 --   "objective" score points (gems, tails, time on the hill); the top scores go through
---   "team"      teams play for points; the team with the fewest is out
+--   "team"      teams play for points; the team with the fewest is out (its top scorer is saved)
 --   "final"     a race where only the winner counts: first to grab the crown
 
 local Rounds = {}
@@ -19,16 +19,19 @@ Rounds.List = {
 		kind = "race",
 		name = "Slime Slide",
 		world = "candy",
-		blurb = "Slide down, dodge the bumpers and race to the line!",
+		blurb = "Slide down, steer round the holes and jump the sweepers!",
 		pieces = {
 			{ "start" },
-			{ "slide", len = 70, drop = 22, w = 22, bumpers = 6 },
-			{ "checkpoint" },
+			{ "slide", len = 60, drop = 18, w = 22, bumpers = 3, holes = 2, sweepers = 1 },
+			{ "turn", dir = "left", size = 22 },
 			{ "spinner", r = 16, speed = 1.2 },
+			{ "checkpoint" },
+			{ "slide", len = 72, drop = 22, w = 22, bumpers = 2, holes = 3, sweepers = 2 },
+			{ "turn", dir = "right", size = 22 },
 			{ "bounce", rise = 14 },
 			{ "conveyor", len = 32, speed = -8, w = 16 },
 			{ "checkpoint" },
-			{ "slide", len = 60, drop = 18, w = 22, bumpers = 4 },
+			{ "slide", len = 60, drop = 18, w = 20, bumpers = 2, holes = 2, sweepers = 2 },
 			{ "finish" },
 		},
 	},
@@ -152,7 +155,7 @@ Rounds.List = {
 		kind = "objective",
 		name = "Tail Tag",
 		world = "frost",
-		blurb = "Grab a tail and keep it! Whoever has a tail at the end goes through.",
+		blurb = "Grab a tail and keep it! Dash to snatch one from further away. Tails at the end go through.",
 		arena = "tails",
 		seconds = 75,
 	},
@@ -173,7 +176,7 @@ Rounds.List = {
 		kind = "team",
 		name = "Egg Scramble",
 		world = "candy",
-		blurb = "Carry eggs to your team's nest. Steal from the others! Fewest eggs is out.",
+		blurb = "Carry eggs to your nest. Bonk or dash into carriers to steal! Fewest eggs is out, but its top scorer is saved.",
 		arena = "eggs",
 		seconds = 90,
 		hammers = true,
@@ -183,7 +186,7 @@ Rounds.List = {
 		kind = "team",
 		name = "Ball Rush",
 		world = "space",
-		blurb = "Push the giant ball into the other goals and guard your own!",
+		blurb = "Run into the ball to kick it, dash for a power kick! Most goals let in is out, but its top scorer is saved.",
 		arena = "ball",
 		seconds = 90,
 	},

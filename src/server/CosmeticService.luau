@@ -213,11 +213,13 @@ function CosmeticService.Tag(model, info)
 		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	end
 
+	-- Sized in studs, so far-off tags shrink like the runners do and don't
+	-- cover the course
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BonkTag"
-	gui.Size = UDim2.fromOffset(220, 96)
-	gui.StudsOffset = Vector3.new(0, 3.4, 0)
-	gui.MaxDistance = 140
+	gui.Size = UDim2.new(6, 0, 2.6, 0)
+	gui.StudsOffset = Vector3.new(0, 2.6, 0)
+	gui.MaxDistance = 100
 	gui.Adornee = head
 	local layout = Instance.new("UIListLayout")
 	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -229,7 +231,7 @@ function CosmeticService.Tag(model, info)
 		order += 1
 		local label = Instance.new("TextLabel")
 		label.Name = name
-		label.Size = UDim2.new(1, 0, 0, height)
+		label.Size = UDim2.new(1, 0, height / 96, 0)
 		label.BackgroundTransparency = 1
 		label.Text = text
 		label.TextColor3 = color

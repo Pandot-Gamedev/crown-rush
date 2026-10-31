@@ -17,6 +17,25 @@ local LEADERBOARD_REFRESH = 120
 local lobbySpawn = nil
 
 ------------------------------------------------------------------ Leaderboards
+local ROWS = 10
+
+local function label(props)
+	local text = Instance.new("TextLabel")
+	text.BackgroundTransparency = 1
+	text.TextScaled = true
+	text.TextWrapped = false
+	text.TextTruncate = Enum.TextTruncate.AtEnd
+	text.Font = Enum.Font.GothamMedium
+	text.TextColor3 = Color3.new(1, 1, 1)
+	for key, value in pairs(props) do
+		text[key] = value
+	end
+	return text
+end
+
+-- One face of a board: a title, then a row per rank (rank, name, score) so a
+-- long name gets cut short instead of pushing the score onto the next line.
+-- Returns a function(title, rows or message).
 local function makeBoardFace(boardPart, face)
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "BoardGui"
@@ -25,42 +44,83 @@ local function makeBoardFace(boardPart, face)
 	gui.PixelsPerStud = 30
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 12)
+	padding.PaddingBottom = UDim.new(0, 12)
 	padding.PaddingLeft = UDim.new(0, 16)
 	padding.PaddingRight = UDim.new(0, 16)
 	padding.Parent = gui
-	local title = Instance.new("TextLabel")
-	title.Name = "Title"
-	title.Size = UDim2.new(1, 0, 0.16, 0)
-	title.BackgroundTransparency = 1
-	title.TextScaled = true
-	title.Font = Enum.Font.FredokaOne
-	title.TextColor3 = Color3.fromRGB(255, 220, 120)
-	title.Parent = gui
-	local body = Instance.new("TextLabel")
-	body.Name = "Body"
-	body.Position = UDim2.new(0, 0, 0.18, 0)
-	body.Size = UDim2.new(1, 0, 0.8, 0)
-	body.BackgroundTransparency = 1
-	body.Text = "Loading..."
-	body.TextScaled = true
-	body.TextXAlignment = Enum.TextXAlignment.Left
-	body.TextYAlignment = Enum.TextYAlignment.Top
-	body.Font = Enum.Font.GothamMedium
-	body.TextColor3 = Color3.new(1, 1, 1)
-	body.Parent = gui
+	local title = label({
+		Name = "Title",
+		Size = UDim2.new(1, 0, 0.16, 0),
+		Font = Enum.Font.FredokaOne,
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Parent = gui,
+	})
+	local message = label({
+		Name = "Message",
+		Position = UDim2.new(0, 0, 0.2, 0),
+		Size = UDim2.new(1, 0, 0.3, 0),
+		TextWrapped = true,
+		TextTruncate = Enum.TextTruncate.None,
+		Text = "Loading...",
+		Parent = gui,
+	})
+	local rows = {}
+	local height = 0.8 / ROWS
+	for index = 1, ROWS do
+		local y = UDim2.new(0, 0, 0.19 + (index - 1) * height, 0)
+		local row = {
+			rank = label({
+				Position = y,
+				Size = UDim2.new(0.12, 0, height * 0.86, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = Color3.fromRGB(255, 220, 120),
+				Font = Enum.Font.FredokaOne,
+				Parent = gui,
+			}),
+			name = label({
+				Position = y + UDim2.new(0.12, 0, 0, 0),
+				Size = UDim2.new(0.6, 0, height * 0.86, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Parent = gui,
+			}),
+			score = label({
+				Position = y + UDim2.new(0.74, 0, 0, 0),
+				Size = UDim2.new(0.26, 0, height * 0.86, 0),
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Font = Enum.Font.FredokaOne,
+				Parent = gui,
+			}),
+		}
+		-- Rows share one text size, so short lines don't come out huge
+		for _, text in pairs(row) do
+			local limit = Instance.new("UITextSizeConstraint")
+			limit.MaxTextSize = 34
+			limit.Parent = text
+		end
+		rows[index] = row
+	end
 	gui.Parent = boardPart
-	return title, body
+	return function(titleText, content)
+		title.Text = titleText
+		local list = type(content) == "table" and content or {}
+		message.Text = type(content) == "string" and content or ""
+		message.Visible = type(content) == "string"
+		for index, row in ipairs(rows) do
+			local entry = list[index]
+			row.rank.Text = entry and (index .. ".") or ""
+			row.name.Text = entry and entry.name or ""
+			row.score.Text = entry and entry.score or ""
+		end
+	end
 end
 
--- Boards show the same text on both sides. Returns a function(title, text).
+-- Boards show the same text on both sides. Returns a function(title, rows or message).
 local function makeBoardGui(boardPart)
-	local frontTitle, frontBody = makeBoardFace(boardPart, Enum.NormalId.Front)
-	local backTitle, backBody = makeBoardFace(boardPart, Enum.NormalId.Back)
-	return function(title, text)
-		frontTitle.Text = title
-		backTitle.Text = title
-		frontBody.Text = text
-		backBody.Text = text
+	local front = makeBoardFace(boardPart, Enum.NormalId.Front)
+	local back = makeBoardFace(boardPart, Enum.NormalId.Back)
+	return function(title, content)
+		front(title, content)
+		back(title, content)
 	end
 end
 
@@ -92,14 +152,11 @@ local function topTen(storeName, emptyText)
 	if not ok then
 		return "Leaderboard unavailable right now."
 	end
-	local lines = {}
-	for rank, entry in ipairs(pages:GetCurrentPage()) do
-		table.insert(
-			lines,
-			string.format("%d. %s  -  %s", rank, nameFor(tonumber(entry.key)), Format.Number(entry.value))
-		)
+	local rows = {}
+	for _, entry in ipairs(pages:GetCurrentPage()) do
+		table.insert(rows, { name = nameFor(tonumber(entry.key)), score = Format.Number(entry.value) })
 	end
-	return #lines > 0 and table.concat(lines, "\n") or emptyText
+	return #rows > 0 and rows or emptyText
 end
 
 -- The crowns board takes turns showing all-time crowns and this week's crowns
@@ -118,7 +175,7 @@ local function runCrownsBoard(boardPart)
 	while true do
 		setText("Most Crowns", allTime)
 		task.wait(12)
-		setText("This Week's Crowns", weekly .. "\n\nNew week in " .. Format.Duration(weekLeft - os.time()))
+		setText("This Week's Crowns  (new week in " .. Format.Duration(weekLeft - os.time()) .. ")", weekly)
 		task.wait(12)
 	end
 end
