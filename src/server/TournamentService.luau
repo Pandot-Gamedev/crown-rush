@@ -28,6 +28,8 @@ local GameRound = require(script.Parent.GameRound)
 local TournamentService = {}
 
 local PAD_RADIUS = 9
+local CHAMPION_STAND = CFrame.new(0, Config.ChampionStandY + 3, 0) -- standing in the plaza crown (root 3 studs up)
+
 -- Seconds (the offline checks shorten these)
 local Timing = {
 	wait = 25, -- once someone is on a pad
@@ -384,16 +386,16 @@ local function finish(t, winner, alive)
 				end
 			end
 			TutorialService.Event(player, "Tournament")
-			-- Back to the plaza, the champion on the crown statue
+			-- Back to the plaza, the champion dancing in the crown statue
 			local character = player.Character
 			if character and lobbySpawn then
-				character:PivotTo(won and CFrame.new(0, 19, 0) or lobbySpawn())
+				character:PivotTo(won and CHAMPION_STAND or lobbySpawn())
 			end
 			if won then
 				local dance = CosmeticService.Equipped(player, "dance")
 				task.delay(0.5, function()
 					if character.Parent then
-						pcall(CosmeticService.Dance, character, dance and dance.id, CFrame.new(0, 19, 0), 5)
+						pcall(CosmeticService.Dance, character, dance and dance.id, CHAMPION_STAND, 5)
 					end
 				end)
 			end

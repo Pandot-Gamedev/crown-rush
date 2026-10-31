@@ -22,6 +22,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Motion = require(Shared.Motion)
+local Crown = require(Shared.Crown)
 
 local Kit = {}
 
@@ -331,41 +332,24 @@ B.finish = function(pc, o)
 	pc.ctx.sign(banner, o.crown and "GRAB THE CROWN!" or "FINISH")
 	if o.crown then
 		-- The tournament's crown, spinning over the line: first one through wins it
-		local gold = Color3.fromRGB(255, 200, 40)
-		local home = pc:C(0, 7, 6)
-		local band = pc:Mover({
-			Name = "CrownBand",
-			Shape = Enum.PartType.Cylinder,
-			Size = Vector3.new(1.6, 5, 5),
-			CFrame = home,
-			Color = gold,
-			Material = Enum.Material.Foil,
-			CanCollide = false,
-		}, { Motion = "spin", Home = home, Offset = UPRIGHT, Speed = 1.5 })
-		band.CastShadow = false
-		for index = 1, 5 do
-			local angle = index / 5 * math.pi * 2
-			pc:Mover({
-				Name = "CrownPoint",
-				Size = Vector3.new(1, 2, 1),
-				CFrame = home,
-				Color = gold,
-				Material = Enum.Material.Foil,
-				CanCollide = false,
-			}, {
-				Motion = "spin",
-				Home = home,
-				Offset = CFrame.new(math.cos(angle) * 2.1, 1.6, math.sin(angle) * 2.1)
-					* CFrame.Angles(0, -angle, 0)
-					* CFrame.Angles(0, 0, math.rad(45)),
-				Speed = 1.5,
-			})
+		local home = pc:C(0, 7.5, 6)
+		for _, piece in ipairs(Crown.Pieces(5, "full")) do
+			local p = Crown.Make(piece)
+			p:SetAttribute("Motion", "spin")
+			p:SetAttribute("Home", home)
+			p:SetAttribute("Offset", piece.cframe)
+			p:SetAttribute("Speed", 1.5)
+			CollectionService:AddTag(p, Motion.Tag)
+			p.CFrame = Motion.At(Motion.Read(p), Motion.Clock())
+			p.Parent = pc.folder
+			if piece.name == "CrownVelvet" then
+				local light = Instance.new("PointLight")
+				light.Color = Crown.Gold
+				light.Range = 18
+				light.Brightness = 3
+				light.Parent = p
+			end
 		end
-		local light = Instance.new("PointLight")
-		light.Color = gold
-		light.Range = 18
-		light.Brightness = 3
-		light.Parent = band
 	end
 	for index = 0, 13 do
 		pc:Part({

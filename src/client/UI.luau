@@ -153,6 +153,43 @@ function UI.IsWindowOpen()
 	return openWindow ~= nil
 end
 
+-- Every menu or card that wants the player's full attention (windows, result
+-- cards) is registered here. While any of them shows, the character stands
+-- still and can't jump, dash or bonk (Controls listens to MenuChanged).
+local menus = {}
+local menuOpen = false
+local menuChanged = Instance.new("BindableEvent")
+UI.MenuChanged = menuChanged.Event -- fires with true/false
+
+local function recheckMenus()
+	local open = false
+	for frame in pairs(menus) do
+		if frame.Visible then
+			open = true
+			break
+		end
+	end
+	if open ~= menuOpen then
+		menuOpen = open
+		menuChanged:Fire(open)
+	end
+end
+
+function UI.menu(frame)
+	menus[frame] = true
+	frame:GetPropertyChangedSignal("Visible"):Connect(recheckMenus)
+	frame.Destroying:Connect(function()
+		menus[frame] = nil
+		recheckMenus()
+	end)
+	recheckMenus()
+	return frame
+end
+
+function UI.IsMenuOpen()
+	return menuOpen
+end
+
 function UI.window(screenGui, title, render)
 	local frame = UI.new("Frame", {
 		Name = title .. "Window",
@@ -185,6 +222,7 @@ function UI.window(screenGui, title, render)
 		Parent = frame,
 	})
 
+	UI.menu(frame)
 	local window = { frame = frame, body = body }
 
 	function window.refresh()

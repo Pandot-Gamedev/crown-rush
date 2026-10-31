@@ -6,6 +6,8 @@
 --   Bonk: click, F, R2 on a controller, or the BONK button on phones, only
 --         while you hold a foam hammer (fight rounds). The server decides who
 --         gets hit; this script only asks to swing.
+--   Menus: while a menu or result card is open the character stands still and
+--         none of these work, so clicking a button never moves or bonks you.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -17,6 +19,7 @@ local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 
 local Movement = require(script.Parent.Movement)
+local UI = require(script.Parent.UI)
 
 local Controls = {}
 
@@ -62,7 +65,13 @@ end
 
 function Controls.Bonk()
 	local now = os.clock()
-	if not Controls.HasHammer() or now - lastBonk < Config.BonkCooldown or Movement.IsStunned() or not parts() then
+	if
+		not Controls.HasHammer()
+		or now - lastBonk < Config.BonkCooldown
+		or Movement.IsStunned()
+		or UI.IsMenuOpen()
+		or not parts()
+	then
 		return
 	end
 	lastBonk = now
@@ -72,7 +81,13 @@ end
 function Controls.Dive()
 	local now = os.clock()
 	local root, humanoid = parts()
-	if not root or now - lastDive < Config.DiveCooldown or Movement.IsStunned() or humanoid.WalkSpeed <= 0 then
+	if
+		not root
+		or now - lastDive < Config.DiveCooldown
+		or Movement.IsStunned()
+		or UI.IsMenuOpen()
+		or humanoid.WalkSpeed <= 0
+	then
 		return
 	end
 	local inAir = humanoid.FloorMaterial == Enum.Material.Air
@@ -144,7 +159,7 @@ end
 
 local function onJumpRequest()
 	local root, humanoid = parts()
-	if not root or Movement.IsStunned() then
+	if not root or Movement.IsStunned() or UI.IsMenuOpen() then
 		return
 	end
 	local now = os.clock()
@@ -174,6 +189,38 @@ local function showBonkButton(on)
 		end, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.F, Enum.KeyCode.ButtonR2)
 	else
 		ContextActionService:UnbindAction("CrownRushBonk")
+	end
+end
+
+-- Roblox's own movement controls (keys, thumbstick, jump button)
+local playerControls = nil
+local function getPlayerControls()
+	if not playerControls then
+		pcall(function()
+			local module = player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule", 10)
+			playerControls = require(module):GetControls()
+		end)
+	end
+	return playerControls
+end
+
+local function holdStill()
+	local controls = getPlayerControls()
+	local menuOpen = UI.IsMenuOpen() -- read after the wait above, so the latest state wins
+	if controls then
+		if menuOpen then
+			controls:Disable()
+		else
+			controls:Enable()
+		end
+	end
+	if menuOpen then
+		stopDive()
+		local _, humanoid = parts()
+		if humanoid then
+			humanoid:Move(Vector3.zero)
+			humanoid.Jump = false
+		end
 	end
 end
 
@@ -207,6 +254,9 @@ function Controls.Init()
 	end, false, Enum.KeyCode.Q, Enum.KeyCode.ButtonX)
 
 	UserInputService.JumpRequest:Connect(onJumpRequest)
+	UI.MenuChanged:Connect(function()
+		task.spawn(holdStill)
+	end)
 	Movement.Launched:Connect(function()
 		stopDive()
 	end)

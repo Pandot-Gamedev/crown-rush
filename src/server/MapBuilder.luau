@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Worlds = require(Shared.Worlds)
+local Crown = require(Shared.Crown)
 
 local MapBuilder = {}
 
@@ -391,41 +392,24 @@ function MapBuilder.Build()
 		Material = Enum.Material.Marble,
 		Parent = scenery,
 	})
-	local crownBase = part({
-		Name = "CrownBand",
+	-- A giant royal crown on the pedestal. Tournament champions dance inside
+	-- it, standing on the velvet (Config.ChampionStandY).
+	local crownSize = 9
+	local crownCenter = Config.ChampionStandY - Crown.CapTop(crownSize, "statue")
+	local statue = Crown.Build(scenery, CFrame.new(0, crownCenter, 0), crownSize, "statue")
+	statue.Name = "CrownStatue"
+	part({
+		Name = "CrownStand",
 		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(3, 9, 9),
-		CFrame = CFrame.new(0, 10, 0) * UPRIGHT,
-		Color = Color3.fromRGB(255, 200, 40),
-		Material = Enum.Material.Foil,
+		Size = Vector3.new(1, 6, 6),
+		CFrame = CFrame.new(0, Config.ChampionStandY - 0.5, 0) * UPRIGHT,
+		Transparency = 1,
 		Parent = scenery,
 	})
-	for index = 0, 4 do
-		local angle = index / 5 * math.pi * 2
-		part({
-			Name = "CrownPoint",
-			Size = Vector3.new(2, 4, 2),
-			CFrame = CFrame.new(math.cos(angle) * 3.6, 13, math.sin(angle) * 3.6)
-				* CFrame.Angles(0, -angle, 0)
-				* CFrame.Angles(0, 0, math.rad(45)),
-			Color = Color3.fromRGB(255, 200, 40),
-			Material = Enum.Material.Foil,
-			Parent = scenery,
-		})
-		part({
-			Name = "CrownJewel",
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(1.4, 1.4, 1.4),
-			Position = Vector3.new(math.cos(angle) * 4.5, 10, math.sin(angle) * 4.5),
-			Color = Color3.fromRGB(255, 60, 90),
-			Material = Enum.Material.Neon,
-			Parent = scenery,
-		})
-	end
 	local glow = Instance.new("PointLight")
 	glow.Color = Color3.fromRGB(255, 220, 120)
 	glow.Range = 24
-	glow.Parent = crownBase
+	glow.Parent = statue:FindFirstChild("CrownVelvet")
 
 	-- World gates in an arc to the north, each facing the fountain
 	for index, world in ipairs(Worlds.List) do

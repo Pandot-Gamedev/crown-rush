@@ -28,6 +28,7 @@ Config.HitUp = 30
 Config.HitStun = 0.55
 Config.BounceSpeed = 95 -- bounce pads straight up
 Config.RespawnSeconds = 0.6 -- time between falling and appearing at your checkpoint
+Config.ChampionStandY = 14 -- top of the velvet in the plaza's crown statue, where champions dance
 Config.FallBelow = 28 -- studs under the lowest floor of your section counts as a fall
 
 -- Adventure (solo courses)

@@ -246,7 +246,7 @@ local function buildBar(screenGui)
 			and input.KeyCode == Enum.KeyCode.R
 			and run
 			and (run.mode == "adventure" or run.mode == "daily")
-			and not resultCard.Visible
+			and not UI.IsMenuOpen()
 		then
 			act("RetryCourse")
 		end
@@ -485,6 +485,7 @@ local function buildResult(screenGui)
 		ZIndex = 5,
 		Parent = screenGui,
 	}, { UI.corner(16), UI.stroke(T.Gold, 3) })
+	UI.menu(resultCard)
 	resultBody = UI.new("Frame", {
 		Position = UDim2.fromOffset(16, 14),
 		Size = UDim2.new(1, -32, 1, -28),

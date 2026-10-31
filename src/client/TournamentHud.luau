@@ -26,7 +26,7 @@ local T = UI.Theme
 local TournamentHud = {}
 
 local player = Players.LocalPlayer
-local CROWN = utf8.char(9819) -- a chess queen, the closest thing to a crown in every font
+local CROWN = utf8.char(0x1F451) -- the crown emoji (Roblox draws emoji in every font)
 
 local KIND_NAMES =
 	{ race = "RACE", survival = "SURVIVAL", final = "FINAL", fight = "FIGHT", objective = "POINTS", team = "TEAM" }
@@ -278,6 +278,7 @@ local function build(screenGui)
 		ZIndex = 5,
 		Parent = screenGui,
 	}, { UI.corner(18), UI.stroke(T.Gold, 3), UI.padding(16), UI.list(10) })
+	UI.menu(endCard)
 	endTitle = UI.label("", { Size = UDim2.new(1, 0, 0, 48), LayoutOrder = 1, ZIndex = 5, Parent = endCard })
 	endBody = UI.label("", {
 		Size = UDim2.new(1, 0, 0, 120),

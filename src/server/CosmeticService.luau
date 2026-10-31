@@ -1,5 +1,5 @@
 -- How everyone looks: name tags (name, level, title, VIP, crowns and damage %
--- in fight rounds), trails, the VIP crown, hammers in fight rounds and crown dances.
+-- in fight rounds), trails, the VIP crown (a small royal crown from Shared.Crown), hammers in fight rounds and crown dances.
 -- Also hands out the free cosmetics players unlock by levelling up or playing.
 
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Cosmetics = require(Shared.Cosmetics)
+local Crown = require(Shared.Crown)
 local Remotes = require(Shared.Remotes)
 local Level = require(Shared.Level)
 local Format = require(Shared.Format)
@@ -314,20 +315,24 @@ local function applyToCharacter(player)
 	end
 
 	if vip then
-		local crown = Instance.new("Part")
+		-- A small royal crown, welded on top of the head
+		local crown = Instance.new("Model")
 		crown.Name = "BonkCrown"
-		crown.Size = Vector3.new(1.1, 0.5, 1.1)
-		crown.Color = VIP_GOLD
-		crown.Material = Enum.Material.Neon
-		crown.CanCollide = false
-		crown.CanQuery = false
-		crown.CanTouch = false
-		crown.Massless = true
-		local weld = Instance.new("Weld")
-		weld.Part0 = head
-		weld.Part1 = crown
-		weld.C0 = CFrame.new(0, head.Size.Y / 2 + 0.3, 0)
-		weld.Parent = crown
+		local size = math.max(head.Size.X, head.Size.Z) * 1.05
+		local seat = CFrame.new(0, head.Size.Y / 2 + size * 0.12, 0)
+		for _, piece in ipairs(Crown.Pieces(size, "small")) do
+			local part = Crown.Make(piece)
+			part.Anchored = false
+			part.CanQuery = false
+			part.Massless = true
+			part.CFrame = head.CFrame * seat * piece.cframe
+			local weld = Instance.new("Weld")
+			weld.Part0 = head
+			weld.Part1 = part
+			weld.C0 = seat * piece.cframe
+			weld.Parent = part
+			part.Parent = crown
+		end
 		crown.Parent = character
 	end
 
