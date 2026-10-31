@@ -44,6 +44,7 @@ Config.MinTimeShare = 0.35 -- a finish faster than this share of par is ignored 
 Config.CourseRewards = { finish = 10, firstFinish = 40, star = 25, gem = 10 }
 Config.CourseXp = { finish = 40, firstFinish = 80, star = 30, gem = 10 }
 Config.VipCoinBonus = 0.25
+Config.FriendCoinBonus = 0.2 -- while a Roblox friend is in your server (adds to VIP)
 Config.DailyChallengeCoins = 150 -- first finish of the Daily Challenge each day
 Config.DailyChallengeXp = 120
 
