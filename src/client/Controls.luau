@@ -11,6 +11,7 @@
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
@@ -204,6 +205,11 @@ local function getPlayerControls()
 	return playerControls
 end
 
+-- Roblox's controls switch themselves back on when the input type changes
+-- (mouse to keyboard, say), so Disable() alone isn't enough. While a menu is
+-- open we also cancel any walking or jumping every frame, right after Roblox's
+-- own controls have run.
+local HOLD_STEP = "CrownRushMenuHold"
 local function holdStill()
 	local controls = getPlayerControls()
 	local menuOpen = UI.IsMenuOpen() -- read after the wait above, so the latest state wins
@@ -214,13 +220,16 @@ local function holdStill()
 			controls:Enable()
 		end
 	end
+	pcall(RunService.UnbindFromRenderStep, RunService, HOLD_STEP)
 	if menuOpen then
 		stopDive()
-		local _, humanoid = parts()
-		if humanoid then
-			humanoid:Move(Vector3.zero)
-			humanoid.Jump = false
-		end
+		RunService:BindToRenderStep(HOLD_STEP, Enum.RenderPriority.Input.Value + 1, function()
+			local _, humanoid = parts()
+			if humanoid then
+				humanoid:Move(Vector3.zero)
+				humanoid.Jump = false
+			end
+		end)
 	end
 end
 
