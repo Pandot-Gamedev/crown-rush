@@ -319,7 +319,7 @@ local function applyToCharacter(player)
 		local crown = Instance.new("Model")
 		crown.Name = "BonkCrown"
 		local size = math.max(head.Size.X, head.Size.Z) * 1.05
-		local seat = CFrame.new(0, head.Size.Y / 2 + size * 0.12, 0)
+		local seat = CFrame.new(0, head.Size.Y / 2 + size * 0.24, 0) -- a little up, so hair doesn't hide the jewels
 		for _, piece in ipairs(Crown.Pieces(size, "small")) do
 			local part = Crown.Make(piece)
 			part.Anchored = false
