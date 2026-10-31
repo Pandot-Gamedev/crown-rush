@@ -34,7 +34,7 @@ local Timing = {
 	full = 4, -- once the pad is full
 	intro = 5, -- the round's name card
 	countdown = 3, -- 3-2-1-GO
-	between = 4, -- after a round, before the next one
+	between = 6, -- after a round, before the next one (time to see who got through)
 }
 TournamentService.Timing = Timing
 local ARENA_ORIGIN = Vector3.new(-3000, 300, 0)
@@ -166,10 +166,16 @@ function Tournament:Qualified(entrant, place, time)
 	end
 end
 
--- Out during a round (a survival fall): told now, rewards come when the round ends
-function Tournament:OutOfRound(entrant, place)
-	if entrant.player and not entrant.left then
-		Remotes.Announce:FireClient(entrant.player, "out", { tournament = self.id, place = place })
+-- Out: told the moment it happens, with why (a survival fall, or the end of
+-- a round). Rewards come when the round ends.
+function Tournament:OutOfRound(entrant, place, reason)
+	if entrant.player and not entrant.left and not entrant.toldOut then
+		entrant.toldOut = true
+		Remotes.Announce:FireClient(
+			entrant.player,
+			"out",
+			{ tournament = self.id, place = place, of = #self.entrants, reason = reason }
+		)
 	end
 end
 
@@ -306,6 +312,8 @@ local function run(t)
 			entrant.alive = false
 			entrant.place = nextPlace
 			nextPlace += 1
+			-- Anyone not told yet hears it now, while they can still see the round
+			t:OutOfRound(entrant, entrant.place, match.reasons and match.reasons[entrant])
 		end
 		for _, entrant in ipairs(qualified) do
 			entrant.roundsSurvived = (entrant.roundsSurvived or 0) + 1

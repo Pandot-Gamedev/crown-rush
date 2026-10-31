@@ -247,6 +247,7 @@ Arenas.lava = function(arena, world, seconds)
 	function arena.isOut(position)
 		return position.Y - ROOT_HEIGHT < lavaTop() - 0.5
 	end
+	arena.outText = "The lava got you!"
 	function arena.update() end
 
 	-- Bots climb the spiral step by step, a little ahead of the lava
@@ -539,6 +540,7 @@ function SurvivalRound.new(t, round, entrants, keep, _number, origin)
 		alive = {},
 		out = {},
 		byBot = {},
+		reasons = {},
 	}, SurvivalRound)
 	arena.round = self
 	for index, entrant in ipairs(entrants) do
@@ -561,18 +563,23 @@ function SurvivalRound:knockOut(entrant)
 	table.remove(self.alive, index)
 	table.insert(self.out, entrant)
 	self.t:SetInRound(entrant, false)
+	local reason = self.arena.outText or "You fell off!"
 	if entrant.fighter then
 		local by = CombatService.LastHitBy(entrant.fighter, 6)
 		self.t:KnockedOut(by and by.entrant, entrant)
 		CombatService.Leave(entrant)
+		if by and by.entrant ~= entrant then
+			reason = by.entrant.name .. " bonked you off!"
+		end
 	end
+	reason ..= string.format("  %d still standing", #self.alive)
 	if entrant.bot then
 		BotService.Stop(entrant.bot)
 		BotService.Place(entrant.bot, ArenaKit.standsSpot(self.arena, random))
 	else
 		self.t:Place(entrant, ArenaKit.standsSpot(self.arena, random))
 	end
-	self.t:OutOfRound(entrant, #self.alive + 1)
+	self.t:OutOfRound(entrant, #self.alive + 1, reason)
 end
 
 function SurvivalRound:Play()

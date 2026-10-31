@@ -1,7 +1,12 @@
 -- What you see in a tournament: the round intro card, 3-2-1-GO, the round
--- bar (timer and how many go through), the big QUALIFIED / OUT / CROWN
+-- bar (timer and how many go through), the big QUALIFIED / ELIMINATED / CROWN
 -- banners, the end card with your rewards, and the watch mode that follows
 -- the runners still in once you're out.
+--
+-- Being knocked out: the screen flashes red with a big ELIMINATED and why
+-- (who took the last spot, who bonked you off...) the moment it happens.
+-- You see the rest of that round, then the camera follows the runners still
+-- in, and your result card comes when the tournament ends or you stop watching.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -36,9 +41,11 @@ local KIND_COLORS = {
 
 local roundBar, roundTitle, roundTimer, roundStatus, roundYou
 local introCard, introKind, introName, introBlurb, introKeep
-local countdownLabel, banner, bannerSub
+local countdownLabel, banner, bannerSub, outFlash
 local endCard, endTitle, endBody, endButtons
-local leaveButton, watchBar, watchName
+local leaveButton, watchBar, watchName, watchResult
+
+local pendingResult = nil -- your result, shown once you stop watching
 
 local endsAt = nil
 local goAt = nil
@@ -65,7 +72,7 @@ end
 
 ------------------------------------------------------------------ Big text
 local bannerToken = 0
-local function showBanner(text, sub, color, seconds)
+local function showBanner(text, sub, color, seconds, size)
 	bannerToken += 1
 	local token = bannerToken
 	banner.Text = text
@@ -75,7 +82,7 @@ local function showBanner(text, sub, color, seconds)
 	bannerSub.Visible = sub ~= nil
 	local scale = banner:FindFirstChildOfClass("UIScale")
 	scale.Scale = 0.4
-	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = size or 1 }):Play()
 	task.delay(seconds or 3, function()
 		if bannerToken == token then
 			banner.Visible = false
@@ -228,6 +235,17 @@ local function build(screenGui)
 	})
 
 	-- Banners: QUALIFIED!, OUT!, the winner
+	-- A red flash over the whole screen the moment you're out
+	outFlash = UI.new("Frame", {
+		Name = "OutFlash",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = T.Bad,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Visible = false,
+		Parent = screenGui,
+	})
+
 	-- Banners sit high, above the runner, and go quickly
 	banner = UI.label("", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -241,7 +259,7 @@ local function build(screenGui)
 	bannerSub = UI.label("", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0.24, 36),
-		Size = UDim2.fromOffset(500, 26),
+		Size = UDim2.fromOffset(640, 28),
 		Font = T.Font,
 		TextStrokeTransparency = 0.3,
 		Visible = false,
@@ -302,6 +320,19 @@ local function build(screenGui)
 		Visible = false,
 		Parent = screenGui,
 	})
+
+	-- Your result, just above the watch bar while you watch the rest
+	watchResult = UI.label("", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -78),
+		Size = UDim2.fromOffset(520, 26),
+		BackgroundColor3 = T.Background,
+		BackgroundTransparency = 0.3,
+		TextColor3 = T.Bad,
+		Visible = false,
+		Parent = screenGui,
+	})
+	UI.corner(8).Parent = watchResult
 
 	-- Watch bar, bottom center
 	watchBar = UI.new("Frame", {
@@ -382,6 +413,7 @@ local handlers = {}
 
 function handlers.start(info)
 	closeEnd()
+	pendingResult = nil
 	local bots = info.bots > 0 and string.format(" and %d bots", info.bots) or ""
 	Notifications.Show(string.format("Tournament on! %d players%s", info.players, bots), "info")
 end
@@ -452,28 +484,53 @@ function handlers.crown(_info)
 	Effects.Sound("win")
 end
 
+-- You're out: make it impossible to miss, and say why
 function handlers.out(info)
-	showBanner("OUT!", string.format("%s place. Watch from the stands", ordinal(info.place)), T.Bad, 2.5)
+	local place = info.place and info.of and string.format("%s of %d", ordinal(info.place), info.of) or nil
+	showBanner("ELIMINATED!", info.reason or place, T.Bad, 5, 1.35)
 	Effects.Sound("fall")
+	outFlash.Visible = true
+	outFlash.BackgroundTransparency = 0.4
+	local tween = TweenService:Create(outFlash, TweenInfo.new(1.6), { BackgroundTransparency = 1 })
+	tween.Completed:Connect(function()
+		outFlash.Visible = false
+	end)
+	tween:Play()
 end
 
-function handlers.eliminated(info)
-	endsAt = nil
+local function resultCard(info)
 	local rounds = info.rounds == 1 and "1 round" or (info.rounds .. " rounds")
 	showEnd(
 		"Eliminated",
 		T.Bad,
 		string.format(
-			"You came %s of %d and survived %s.\n%s\n\n%s",
+			"You came %s of %d and survived %s.\n%s\n\nHead back and queue again!",
 			ordinal(info.place),
 			info.of,
 			rounds,
-			rewardLine(info),
-			info.watchable and "Watch the rest, or head back and queue again." or "Head back and queue again!"
+			rewardLine(info)
 		),
-		info.watchable,
+		false,
 		"OK"
 	)
+end
+
+-- Back from the round: follow the runners still in (no clicking needed);
+-- the result card waits until you stop watching
+function handlers.eliminated(info)
+	endsAt = nil
+	if info.watchable then
+		pendingResult = info
+		watchResult.Text = string.format(
+			"You're out: %s of %d   %s   Now watching the rest",
+			ordinal(info.place),
+			info.of,
+			rewardLine(info)
+		)
+		task.spawn(watch, "next")
+	else
+		resultCard(info)
+	end
 end
 
 function handlers.winner(info)
@@ -512,6 +569,7 @@ function TournamentHud.Init(screenGui)
 		roundBar.Visible = inTournament or (watching and watchingKey ~= nil)
 		leaveButton.Visible = inTournament
 		watchBar.Visible = watching and not inTournament and not endCard.Visible
+		watchResult.Visible = watchBar.Visible and pendingResult ~= nil
 		roundTitle.Text = roundText
 		roundBar.Size = UDim2.fromOffset(400, roundYou.Visible and 74 or 56)
 		local now = Workspace:GetServerTimeNow()
@@ -555,6 +613,12 @@ function TournamentHud.Init(screenGui)
 	player:GetAttributeChangedSignal("Watching"):Connect(function()
 		if player:GetAttribute("Watching") == nil then
 			stopWatching()
+			-- Done watching (the tournament ended, or you left): now your result
+			if pendingResult then
+				local info = pendingResult
+				pendingResult = nil
+				task.delay(1.5, resultCard, info)
+			end
 		end
 	end)
 	player:GetAttributeChangedSignal("InTournament"):Connect(function()

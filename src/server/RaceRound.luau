@@ -24,6 +24,7 @@ function RaceRound.new(t, round, entrants, keep, number)
 		keep = keep,
 		finished = {},
 		runs = {},
+		reasons = {}, -- [entrant] = why they're out, for their screen
 		done = false,
 	}, RaceRound)
 	local courseData = { id = round.id, name = round.name, world = round.world, pieces = round.pieces }
@@ -134,6 +135,7 @@ function RaceRound:Play()
 	for index = self.keep + 1, #self.finished do
 		table.insert(eliminated, self.finished[index])
 	end
+	local timeUp = #self.finished < self.keep
 	for _, entrant in ipairs(rest) do
 		if #qualified < self.keep then
 			-- Out of time: whoever got furthest takes the last spots
@@ -141,6 +143,24 @@ function RaceRound:Play()
 			t:Qualified(entrant, #qualified, nil)
 		else
 			table.insert(eliminated, entrant)
+		end
+	end
+	-- Why each one is out
+	local last = qualified[#qualified]
+	for _, entrant in ipairs(eliminated) do
+		if table.find(self.finished, entrant) then
+			self.reasons[entrant] = string.format("You crossed the line, but only the first %d go through", self.keep)
+		elseif timeUp then
+			self.reasons[entrant] = string.format(
+				"Time's up! %s got further than you and took the last spot",
+				last and last.name or "Someone"
+			)
+		else
+			self.reasons[entrant] = string.format(
+				"%d runners crossed the line before you. %s took the last spot",
+				self.keep,
+				last and last.name or "Someone"
+			)
 		end
 	end
 	return qualified, eliminated

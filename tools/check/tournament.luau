@@ -281,6 +281,15 @@ local function main()
 		expect(kinds[kind], "announced " .. kind)
 	end
 	expect(kinds.champion or kinds.eliminated, "the players heard how they did")
+	-- Whoever was knocked out heard it right away, with why
+	expect(kinds.out, "an out player was told the moment they were out")
+	for _, message in ipairs(sent) do
+		if message[2] == "out" then
+			local info = message[3] or {}
+			expect(type(info.reason) == "string" and #info.reason > 0, "an out message says why")
+			print("  out: " .. tostring(info.reason))
+		end
+	end
 
 	expect(#Mock.Warnings == 0, #Mock.Warnings .. " warnings")
 	return failures

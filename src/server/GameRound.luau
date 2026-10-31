@@ -253,6 +253,7 @@ Arenas.tails = function(arena, world)
 	arena.killY = center.Y - 25
 	arena.spawns = ArenaKit.ring(center + Vector3.new(0, ROOT_HEIGHT, 0), 22, 12)
 	arena.label = "tail"
+	arena.outText = "Time's up and you had no tail. Only tail holders go through"
 
 	local tails = {} -- [entrant] = the tail part
 	local held = {} -- [entrant] = seconds holding a tail
@@ -497,6 +498,7 @@ Arenas.eggs = function(arena, world)
 	arena.killY = center.Y - 25
 	arena.label = "eggs"
 	arena.unit = "eggs"
+	arena.loseText = "had the fewest eggs in its nest"
 
 	-- Nests round the edge, one per team
 	local nests = {}
@@ -730,6 +732,7 @@ Arenas.ball = function(arena, world)
 	arena.killY = center.Y - 25
 	arena.label = "goals let in"
 	arena.unit = "goals"
+	arena.loseText = "let in the most goals"
 
 	local goalAngles = {}
 	for index, team in ipairs(round.teams) do
@@ -930,6 +933,7 @@ function GameRound.new(t, round, entrants, keep, _number, origin)
 		byBot = {},
 		hitListeners = {},
 		respawning = {},
+		reasons = {}, -- [entrant] = why they're out, for their screen
 	}, GameRound)
 	for _, entrant in ipairs(entrants) do
 		self.scores[entrant] = 0
@@ -1311,13 +1315,39 @@ function GameRound:Play()
 		t:Announce("flash", {
 			text = loser.name .. " team is out!" .. (saved and ("  " .. saved.name .. " is saved") or ""),
 		})
+		local unit = arena.unit or "points"
 		for _, entrant in ipairs(self:Ranking()) do
 			local out = self.teamOf[entrant] == loser and entrant ~= saved
 			table.insert(out and eliminated or qualified, entrant)
+			if out then
+				local mine = self.scores[entrant] or 0
+				self.reasons[entrant] = string.format(
+					"%s team %s. You scored %d %s%s",
+					loser.name,
+					arena.loseText or "had the fewest",
+					mine,
+					unit,
+					saved and (", " .. saved.name .. " scored more and was saved") or ""
+				)
+			end
 		end
 	else
-		for index, entrant in ipairs(self:Ranking()) do
+		local ranking = self:Ranking()
+		local cutoff = ranking[self.keep]
+		for index, entrant in ipairs(ranking) do
 			table.insert(index <= self.keep and qualified or eliminated, entrant)
+			if index > self.keep and arena.outText then
+				self.reasons[entrant] = arena.outText
+			elseif index > self.keep then
+				self.reasons[entrant] = string.format(
+					"Only the top %d go through. You had %s %s, %s had %s",
+					self.keep,
+					scoreText(self, self.scores[entrant] or 0),
+					arena.label,
+					cutoff and cutoff.name or "the last spot",
+					scoreText(self, cutoff and self.scores[cutoff] or 0)
+				)
+			end
 		end
 	end
 	for place, entrant in ipairs(qualified) do
