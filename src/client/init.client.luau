@@ -15,6 +15,7 @@ local TournamentHud = require(script.TournamentHud)
 local Hud = require(script.Hud)
 local Guide = require(script.Guide)
 local TouchButtons = require(script.TouchButtons)
+local Community = require(script.Community)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -55,6 +56,12 @@ Controls.Init()
 TouchButtons.Init()
 Effects.Init()
 Panels.Init(screenGui)
+Community.Init(screenGui, {
+	gameId = "crown",
+	rewardText = "the Crew Trail and the Pandot Crew title",
+	key = Enum.KeyCode.G,
+})
+Panels.Community = Community.window
 RunHud.Init(screenGui)
 Ghost.Init()
 TournamentHud.Init(screenGui)

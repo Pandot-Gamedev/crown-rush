@@ -124,7 +124,7 @@ function Hud.Init(screenGui)
 		"Frame",
 		UI.with({
 			Name = "Menu",
-			Size = UI.Touch and UDim2.fromOffset(4 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
+			Size = UI.Touch and UDim2.fromOffset(5 * 106, 40) or UDim2.fromOffset(130, 5 * 48),
 			BackgroundTransparency = 1,
 			Parent = screenGui,
 		}, UI.side(166)),
@@ -135,6 +135,7 @@ function Hud.Init(screenGui)
 		{ "Shop", "Shop", Color3.fromRGB(70, 200, 110), Enum.KeyCode.P },
 		{ "Locker", "Locker", Color3.fromRGB(90, 140, 220), Enum.KeyCode.L },
 		{ "Quests", "Quests", Color3.fromRGB(200, 150, 70), Enum.KeyCode.N },
+		{ "Free Gift", "Community", Color3.fromRGB(255, 170, 30), Enum.KeyCode.G },
 	}
 	local shortcuts = {}
 	for index, info in ipairs(buttons) do

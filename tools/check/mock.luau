@@ -91,6 +91,16 @@ function Inst.new(className, parent)
 	rawset(self, "_children", {})
 	rawset(self, "_signals", {})
 	local props = rawget(self, "_props")
+	if className == "ProximityPrompt" then
+		props.Triggered = signal()
+		props.PromptShown = signal()
+		props.PromptHidden = signal()
+	end
+	if className == "TeleportOptions" then
+		props.SetTeleportData = function(options, data)
+			rawget(options, "_props")._data = data
+		end
+	end
 	if PARTS[className] then
 		props.Size = className == "SpawnLocation" and Vector3.new(12, 1, 12) or Vector3.new(4, 1, 2)
 		props.CFrame = CFrame.new()
@@ -167,6 +177,9 @@ mt.__index = function(self, key)
 		or key == "AncestryChanged"
 		or key == "Changed"
 		or key == "DescendantAdded"
+		or key == "DescendantRemoving"
+		or key == "ChildAdded"
+		or key == "ChildRemoved"
 		or key == "AttributeChanged"
 	then
 		local list = rawget(self, "_signals")
@@ -547,6 +560,15 @@ service("Workspace", {
 	end,
 })
 service("ReplicatedStorage")
+-- Terrain (water and sand in the fishing and digging games): accepts and ignores fills
+do
+	local terrain = Inst.new("Terrain")
+	terrain.Name = "Terrain"
+	rawget(terrain, "_props").FillBlock = function() end
+	rawget(terrain, "_props").FillBall = function() end
+	rawget(terrain, "_props").FillCylinder = function() end
+	terrain.Parent = SERVICES.Workspace
+end
 service("ServerScriptService")
 service("ServerStorage")
 service("StarterPlayer")
@@ -585,7 +607,7 @@ service("RunService", {
 	RenderStepped = signal(),
 	PreSimulation = signal(),
 	IsStudio = function()
-		return true
+		return Mock.Studio
 	end,
 	IsServer = function()
 		return true
@@ -619,18 +641,51 @@ rawget(players, "_props").GetNameFromUserIdAsync = function(_, userId)
 	return "Player" .. userId
 end
 
+-- Communities: Mock.Groups[userId] = { [groupId] = true }
+Mock.Groups = {}
+Mock.Studio = true -- RunService:IsStudio()
+Mock.Teleports = {} -- { placeId, players, data } for every TeleportAsync
+Mock.Events = {} -- { player, name, field } for every AnalyticsService custom event
+service("GroupService", {
+	GetGroupsAsync = function(_, userId)
+		local list = {}
+		for groupId in pairs(Mock.Groups[userId] or {}) do
+			table.insert(list, { Id = groupId, Name = "Group" .. groupId, Rank = 1 })
+		end
+		return list
+	end,
+})
+service("TeleportService", {
+	TeleportInitFailed = signal(),
+	TeleportAsync = function(_, placeId, list, options)
+		table.insert(Mock.Teleports, { placeId = placeId, players = list, data = options and options._data })
+	end,
+})
+service("AnalyticsService", {
+	LogCustomEvent = function(_, player, name, _value, fields)
+		table.insert(Mock.Events, { player = player, name = name, fields = fields })
+	end,
+})
+
 -- A pretend player with a character standing at a position
-function Mock.AddPlayer(userId, name)
+function Mock.AddPlayer(userId, name, joinData)
 	local player = Inst.new("Player")
 	local props = rawget(player, "_props")
 	props.Name = name
 	props.DisplayName = name
 	props.UserId = userId
 	props.CharacterAdded = signal()
+	props.CharacterRemoving = signal()
 	props.Kick = function(_, reason)
 		print("KICKED: " .. tostring(reason))
 	end
 	props.RequestStreamAroundAsync = function() end
+	props.IsInGroupAsync = function(_, groupId)
+		return (Mock.Groups[userId] or {})[groupId] == true
+	end
+	props.GetJoinData = function()
+		return joinData or {}
+	end
 	props.LoadCharacter = function() end
 	local character = Inst.new("Model")
 	character.Name = name
@@ -648,6 +703,9 @@ function Mock.AddPlayer(userId, name)
 	character.PrimaryPart = root
 	character.Parent = SERVICES.Workspace
 	props.Character = character
+	local backpack = Inst.new("Backpack")
+	backpack.Name = "Backpack"
+	backpack.Parent = player
 	player.Parent = players
 	players.PlayerAdded:Fire(player)
 	return player

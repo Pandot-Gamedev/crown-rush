@@ -6,7 +6,8 @@
 --         hammer in fight rounds), "title" (text above your head)
 -- source: "default" (everyone has it), "coins" (buy with coins in the Locker),
 --         "level" (free at that level), "robux" (developer product, see productId),
---         "vip" (comes with the VIP pass), "earned" (unlocked by playing, see rule)
+--         "vip" (comes with the VIP pass), "earned" (unlocked by playing, see rule),
+--         "community" (free for joining our community, see Shared/OurGames)
 --
 -- A productId of 0 means "not set up yet": the item shows as "Coming soon".
 -- tools/create_shop_items.luau makes the products and prints the ids to paste here.
@@ -74,6 +75,13 @@ Cosmetics.List = {
 		name = "Golden Trail",
 		source = "vip",
 		colors = { rgb(255, 230, 120), rgb(255, 170, 20) },
+	},
+	{
+		id = "trail_crew",
+		kind = "trail",
+		name = "Crew Trail",
+		source = "community",
+		colors = { rgb(0, 230, 210), rgb(150, 80, 255) },
 	},
 	{
 		id = "trail_rainbow",
@@ -363,6 +371,14 @@ Cosmetics.List = {
 		rule = "gems",
 		amount = 90,
 		color = rgb(80, 230, 255),
+	},
+	{
+		id = "title_crew",
+		kind = "title",
+		name = "Pandot Crew",
+		text = "Pandot Crew",
+		source = "community",
+		color = rgb(0, 230, 210),
 	},
 	{
 		id = "title_obbymaster",

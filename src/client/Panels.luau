@@ -217,6 +217,8 @@ local function howToGet(item, data)
 		return "VIP pass"
 	elseif item.source == "robux" then
 		return "In the Shop"
+	elseif item.source == "community" then
+		return "Free Gift"
 	end
 	return ""
 end
@@ -285,6 +287,8 @@ local function renderLocker(body)
 				cardButton(card, howToGet(item, data), T.Card, function()
 					if item.source == "robux" or item.source == "vip" then
 						Panels.Shop.open()
+					elseif item.source == "community" and Panels.Community then
+						Panels.Community.open()
 					end
 				end)
 			end

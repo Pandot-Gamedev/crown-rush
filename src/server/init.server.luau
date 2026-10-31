@@ -21,6 +21,7 @@ local AdventureService = require(script.AdventureService)
 local WorldService = require(script.WorldService)
 local CombatService = require(script.CombatService)
 local TournamentService = require(script.TournamentService)
+local CommunityService = require(script.CommunityService)
 
 -- Phones play sideways only (either way round)
 game:GetService("StarterGui").ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
@@ -50,6 +51,12 @@ AdventureService.Start(lobbySpawn)
 WorldService.Start(lobbySpawn)
 CombatService.Start()
 TournamentService.Start(lobbySpawn)
+CommunityService.Start({
+	gameId = "crown",
+	rewards = { "trail_crew", "title_crew" },
+	equip = { trail = "trail_crew", title = "title_crew" },
+	rewardText = "Crew Trail and Pandot Crew title",
+})
 DataService.Start()
 
 -- Test helpers for Roblox Studio only (never in the live game). In the command
