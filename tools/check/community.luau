@@ -1,5 +1,6 @@
--- Checks the Free Gift menu's server side outside Roblox: the community reward
--- (not for non-members, once for members, on arrival or by pressing Claim),
+-- Checks the Free Gift menu's server side outside Roblox: the welcome gift for
+-- players arriving from our other games, the community reward (not for
+-- non-members, once for members, on arrival or by pressing Claim),
 -- the Play buttons (teleport to the right place, never to this game) and the
 -- welcome for players coming over from our other games.
 --
@@ -121,6 +122,21 @@ local function main()
 	expect(ownsAll(bob), "member who joined on the website gets the reward on arrival")
 	expect(notes(bob, "Welcome over from " .. other.name) == 1, "welcome message for players from our games")
 
+	-- Not a member, arrives from another of our games: welcome gift
+	local carol = Mock.AddPlayer(2003, "Carol", { TeleportData = { from = other.id } })
+	waitLoaded(carol)
+	expect(ownsAll(carol), "arriving from another of our games gives the welcome gift")
+	expect(notes(carol, "Free welcome gift") == 1, "welcome gift message")
+	local dave = Mock.AddPlayer(2004, "Dave", { SourcePlaceId = other.placeId })
+	waitLoaded(dave)
+	expect(ownsAll(dave), "Roblox's SourcePlaceId alone is enough for the gift")
+	local eve = Mock.AddPlayer(2005, "Eve", { TeleportData = { from = gameId } })
+	waitLoaded(eve)
+	expect(not ownsAll(eve), "no gift for coming from this same game")
+	local frank = Mock.AddPlayer(2006, "Frank", { SourcePlaceId = 12345 })
+	waitLoaded(frank)
+	expect(not ownsAll(frank), "no gift for coming from someone else's game")
+
 	-- Play buttons
 	Mock.Studio = true
 	ok, message = invoke(alice, "play", other.id)
@@ -143,7 +159,10 @@ local function main()
 	for _, event in ipairs(Mock.Events) do
 		names[event.name] = true
 	end
-	expect(names.CommunityReward and names.PlayOtherGame and names.ArrivedFromOurGame, "analytics events are logged")
+	expect(
+		names.CommunityReward and names.PlayOtherGame and names.ArrivedFromOurGame and names.WelcomeGift,
+		"analytics events are logged"
+	)
 
 	if failures == 0 then
 		print("Community check passed")

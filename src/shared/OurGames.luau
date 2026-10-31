@@ -2,12 +2,13 @@
 -- so a change here should be copied to the other three repos.
 --
 -- The "Free Gift" menu lists the other games (with a Play button that takes
--- you straight there) and asks players to join the community for a free,
--- looks-only reward. Nothing here changes how well anyone plays.
+-- you straight there). Each game gives a free, looks-only welcome gift to
+-- players who arrive from one of the others. Nothing here changes how well
+-- anyone plays.
 --
--- CommunityId: the community's (group's) id, from its page address:
---   roblox.com/communities/<id>/... . 0 = not made yet: the gift shows as
---   "Coming soon" and nobody is asked to join.
+-- CommunityId: our Roblox community's (group's) id, from its page address:
+--   roblox.com/communities/<id>/... . 0 = we don't have one (making one costs
+--   100 Robux): the menu shows no Join button. Members get the same gift.
 
 local OurGames = {}
 

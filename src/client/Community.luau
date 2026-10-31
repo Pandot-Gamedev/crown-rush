@@ -1,5 +1,6 @@
--- The "Free Gift" menu: join our community for a free, looks-only reward, and
--- Play buttons for our other games. This file is the same in all four games;
+-- The "Free Gift" menu: Play buttons for our other games, each of which gives
+-- a free, looks-only welcome gift to players who arrive from another of our
+-- games (and, once we have one, a Join button for our community). This file is the same in all four games;
 -- what differs is passed to Community.Init. Also two friendly reminders per
 -- visit (a short message, never a pop-up window).
 
@@ -143,37 +144,43 @@ end
 local function render(body)
 	UI.list(8).Parent = body
 
-	-- The community gift
-	heading(body, "Free gift: join our community", 1)
+	-- This game's welcome gift
+	heading(body, "Free welcome gift in every game", 1)
 	local gift = card(body, 84, 2)
-	local ready = OurGames.CommunityId ~= 0
-	if ready then
-		icon(gift, OurGames.CommunityIcon())
+	local here = OurGames.ById[options.gameId]
+	if here then
+		icon(gift, OurGames.Icon(here))
 	end
 	texts(
 		gift,
-		OurGames.CommunityName,
-		"Join for free and get " .. options.rewardText .. ". Looks only, yours to keep.",
+		"Your gift here",
+		"Come here from one of our other games and get " .. options.rewardText .. ". Looks only, yours to keep.",
 		0.74
 	)
-	if claimed() then
-		sideButton(gift, "Claimed", T.Card)
-	elseif not ready then
-		sideButton(gift, "Coming soon", T.Card)
-	elseif isMember() then
-		sideButton(gift, "Claim", T.Good, function()
-			task.spawn(claim)
-		end)
-	else
-		sideButton(gift, "Join", T.Good, function()
-			task.spawn(join)
-		end)
+	sideButton(gift, claimed() and "Claimed" or "Not yet", T.Card)
+
+	-- Our community (only once there is one)
+	if OurGames.CommunityId ~= 0 then
+		local community = card(body, 84, 3)
+		icon(community, OurGames.CommunityIcon())
+		texts(community, OurGames.CommunityName, "Join our community for free and get the same gift.", 0.74)
+		if claimed() then
+			sideButton(community, "Claimed", T.Card)
+		elseif isMember() then
+			sideButton(community, "Claim", T.Good, function()
+				task.spawn(claim)
+			end)
+		else
+			sideButton(community, "Join", T.Good, function()
+				task.spawn(join)
+			end)
+		end
 	end
 
 	-- Our other games
-	heading(body, "Play our other games", 3)
+	heading(body, "Play our other games (a free gift in each)", 4)
 	for index, entry in ipairs(OurGames.Others(options.gameId)) do
-		local row = card(body, 84, 3 + index)
+		local row = card(body, 84, 4 + index)
 		icon(row, OurGames.Icon(entry))
 		texts(row, entry.name, entry.blurb, 0.74)
 		local button
@@ -214,9 +221,7 @@ function Community.Init(screenGui, initOptions)
 
 	-- Two friendly reminders per visit
 	task.delay(GIFT_REMINDER, function()
-		if OurGames.CommunityId ~= 0 and not claimed() then
-			Notifications.Show("Free gift waiting! Open Free Gift" .. shortcut() .. " to get it.", "rare")
-		end
+		Notifications.Show("Free gifts! Play our other games from Free Gift" .. shortcut() .. ": each one gives you a gift.", "rare")
 	end)
 	task.delay(GAMES_REMINDER, function()
 		local others = OurGames.Others(options.gameId)

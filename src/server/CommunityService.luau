@@ -1,14 +1,15 @@
 -- Our community and our other games (the "Free Gift" menu). This file is the
 -- same in all four games; what differs is passed to CommunityService.Start.
 --
--- Join our community: players who are in it (see Shared/OurGames) get a free,
--- looks-only reward once: the cosmetics in options.rewards. Leaving later
--- doesn't take it away.
 -- Play our other games: the Play button teleports you to one of the others.
--- Players who arrive from one of our games get a short "welcome" message.
+-- Welcome gift: the first time a player arrives from one of our other games,
+-- they get a free, looks-only reward here (the cosmetics in options.rewards).
+-- So every game gives a gift for trying the others, and costs nothing to set up.
+-- Join our community (only once Shared/OurGames has a CommunityId): members
+-- get the same reward. Nothing is taken away later.
 --
--- Custom events (Creator Dashboard > Analytics > Custom): CommunityReward,
--- PlayOtherGame and ArrivedFromOurGame, to see whether any of this works.
+-- Custom events (Creator Dashboard > Analytics > Custom): WelcomeGift,
+-- CommunityReward, PlayOtherGame and ArrivedFromOurGame.
 
 local AnalyticsService = game:GetService("AnalyticsService")
 local GroupService = game:GetService("GroupService")
@@ -103,8 +104,7 @@ local function check(player, fromButton)
 	if not member then
 		return false, fromButton and ("Join " .. OurGames.CommunityName .. " first, then press Claim") or nil
 	end
-	local added = grant(player)
-	if added > 0 then
+	if grant(player) > 0 then
 		Remotes.Notify:FireClient(
 			player,
 			"Thanks for joining " .. OurGames.CommunityName .. "! " .. options.rewardText .. " unlocked.",
@@ -141,21 +141,51 @@ local function play(player, id)
 	return true
 end
 
-local function onPlayerAdded(player)
-	-- Came over from one of our other games?
-	local joinData = player:GetJoinData()
-	local from = type(joinData) == "table" and type(joinData.TeleportData) == "table" and joinData.TeleportData.from
-	local fromGame = type(from) == "string" and OurGames.ById[from]
+-- Which of our other games the player came from, if any. Roblox fills in
+-- SourcePlaceId itself; the teleport data is our own note from the Play button.
+local function cameFrom(player)
+	local ok, joinData = pcall(function()
+		return player:GetJoinData()
+	end)
+	if not ok or type(joinData) ~= "table" then
+		return nil
+	end
+	local source = joinData.SourcePlaceId
+	for _, entry in ipairs(OurGames.List) do
+		if entry.placeId == source and entry.id ~= options.gameId then
+			return entry
+		end
+	end
+	local from = type(joinData.TeleportData) == "table" and joinData.TeleportData.from
+	local entry = type(from) == "string" and OurGames.ById[from]
+	if entry and entry.id ~= options.gameId then
+		return entry
+	end
+	return nil
+end
 
+local function onPlayerAdded(player)
+	local fromGame = cameFrom(player)
 	if not DataService.WaitFor(player) then
 		return
 	end
-	if fromGame and fromGame.id ~= options.gameId then
-		Remotes.Notify:FireClient(player, "Welcome over from " .. fromGame.name .. "!", "rare")
+	if fromGame then
 		log(player, "ArrivedFromOurGame", fromGame.id)
+		if grant(player) > 0 then
+			Remotes.Notify:FireClient(
+				player,
+				"Welcome over from " .. fromGame.name .. "! Free welcome gift: " .. options.rewardText .. ".",
+				"rare"
+			)
+			log(player, "WelcomeGift", fromGame.id)
+		else
+			Remotes.Notify:FireClient(player, "Welcome back from " .. fromGame.name .. "!", "rare")
+		end
 	end
 	-- Joined the community on the website? Hand out the reward on arrival.
-	check(player, false)
+	if OurGames.CommunityId ~= 0 then
+		check(player, false)
+	end
 end
 
 -- options: { gameId = "crown", rewards = { ids }, equip = { [kind] = id }, rewardText = "..." }
