@@ -110,7 +110,7 @@ function RaceRound:Play()
 				playersRacing = true
 			end
 		end
-		if not playersRacing then
+		if not playersRacing and not t:Watched() then
 			break
 		end
 		t:Status(string.format("%d / %d through", math.min(#self.finished, self.keep), self.keep))

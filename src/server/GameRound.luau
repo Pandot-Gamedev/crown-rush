@@ -1252,7 +1252,7 @@ function GameRound:Play()
 				task.spawn(self.Fell, self, entrant)
 			end
 		end
-		if not playersIn then
+		if not playersIn and not t:Watched() then
 			break
 		end
 		arena.update(self:Standing(), dt)

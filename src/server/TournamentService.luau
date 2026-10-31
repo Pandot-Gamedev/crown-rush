@@ -104,6 +104,23 @@ function Tournament:Announce(kind, info)
 	end
 end
 
+-- Is a knocked-out player watching (or still in the stands of the round they
+-- fell out of)? Then the bots play on for them, even with no real players left in.
+function Tournament:Watched()
+	for _, entrant in ipairs(self.entrants) do
+		local player = entrant.player
+		if player and player.Parent and not entrant.left then
+			if
+				player:GetAttribute("Watching") == self.id
+				or (entrant.toldOut and player:GetAttribute("InTournament") == self.id)
+			then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 function Tournament:Status(text)
 	if text ~= self.lastStatus then
 		self.lastStatus = text
@@ -232,10 +249,11 @@ function Tournament:SendHome(entrant, place)
 	self:Freeze({ entrant }, false)
 	local coins, xp = self:Reward(entrant, false)
 	if not entrant.left then
-		-- With no real players left the bots don't play it out, so there's nothing to watch
+		-- Anyone still in (players or bots) can be watched: the bots play on
+		-- while someone watches
 		local others = false
 		for _, other in ipairs(self.entrants) do
-			if other.player and other.alive and not other.left and other ~= entrant then
+			if other.alive and not other.left and other ~= entrant then
 				others = true
 			end
 		end
@@ -273,8 +291,8 @@ local function run(t)
 	end
 	local winner = nil
 	for number, round in ipairs(t.plan) do
-		if not realPlayersIn(t) then
-			-- Only bots left: no need to play it out, one of them takes the crown
+		if not realPlayersIn(t) and not t:Watched() then
+			-- Only bots left and nobody watching: no need to play it out, one of them takes the crown
 			winner = alive[random:NextInteger(1, #alive)]
 			break
 		end

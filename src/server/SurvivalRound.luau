@@ -643,8 +643,8 @@ function SurvivalRound:Play()
 				playersIn = true
 			end
 		end
-		if not playersIn then
-			break -- only bots left standing: no need to watch them
+		if not playersIn and not t:Watched() then
+			break -- only bots left standing and nobody watching them
 		end
 		t:Status(string.format("%d left  -  %d go through", #self.alive, self.keep))
 	end
