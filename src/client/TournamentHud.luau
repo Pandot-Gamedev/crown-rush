@@ -563,6 +563,7 @@ function TournamentHud.Init(screenGui)
 	end)
 
 	local lastShown = nil
+	local lastWatchTry = 0
 	RunService.RenderStepped:Connect(function()
 		local inTournament = player:GetAttribute("InTournament") ~= nil
 		local watching = player:GetAttribute("Watching") ~= nil
@@ -601,12 +602,17 @@ function TournamentHud.Init(screenGui)
 			lastShown = nil
 		end
 
-		-- The runner we follow got knocked out: follow the next one
+		-- The runner we follow got knocked out: follow the next one. Between
+		-- rounds nobody is running, so keep trying until the next round starts.
 		if watching and watchedModel then
 			if not watchedModel.Parent or watchedModel:GetAttribute("Tournament") == nil then
 				watchedModel = nil
+				lastWatchTry = os.clock()
 				task.spawn(watch, "next")
 			end
+		elseif watching and not inTournament and not endCard.Visible and os.clock() - lastWatchTry > 3.5 then
+			lastWatchTry = os.clock()
+			task.spawn(watch, "next")
 		end
 	end)
 
